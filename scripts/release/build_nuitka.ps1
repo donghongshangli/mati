@@ -1,0 +1,156 @@
+# Nuitka Build Script for Mati GUI Application
+# This script builds a standalone Windows executable using Nuitka
+
+param(
+    [switch]$Clean,
+    [string]$OutputName = "MatiGUI.exe"
+)
+
+
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
+
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Mati Nuitka Build Script" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Project Root: $ProjectRoot" -ForegroundColor Yellow
+Write-Host ""
+
+# Clean previous builds if requested
+if ($Clean) {
+    Write-Host "Cleaning previous builds..." -ForegroundColor Yellow
+    $BuildDir = Join-Path $ProjectRoot "build"
+    $DistDir = Join-Path $ProjectRoot "dist"
+    if (Test-Path $BuildDir) { Remove-Item -Recurse -Force $BuildDir }
+    if (Test-Path $DistDir) { Remove-Item -Recurse -Force $DistDir }
+    Write-Host "Clean complete." -ForegroundColor Green
+    Write-Host ""
+}
+
+
+$BootstrapPath = Join-Path $ScriptDir "bootstrap.py"
+if (-not (Test-Path $BootstrapPath)) {
+    Write-Host "ERROR: bootstrap.py not found at $BootstrapPath" -ForegroundColor Red
+    exit 1
+}
+
+
+$RequiredDirs = @(
+    "mati_data",
+    "scripts\data_collection\data\content",
+    "student_app\gui_app\images"
+)
+
+Write-Host "Verifying required directories..." -ForegroundColor Yellow
+foreach ($Dir in $RequiredDirs) {
+    $FullPath = Join-Path $ProjectRoot $Dir
+    if (-not (Test-Path $FullPath)) {
+        Write-Host "WARNING: Directory not found: $FullPath" -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "  [OK] Found: $Dir" -ForegroundColor Green
+    }
+}
+Write-Host ""
+
+# NUITKA INSTALLATION CHECK
+Write-Host "Checking Nuitka installation..." -ForegroundColor Yellow
+try {
+    $NuitkaVersion = python -m nuitka --version 2>&1
+    Write-Host "  [OK] Nuitka found: $NuitkaVersion" -ForegroundColor Green
+}
+catch {
+    Write-Host "  [X] Nuitka not found. Installing..." -ForegroundColor Yellow
+    pip install nuitka
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Failed to install Nuitka" -ForegroundColor Red
+        exit 1
+    }
+}
+Write-Host ""
+
+
+Write-Host "Building executable with Nuitka..." -ForegroundColor Cyan
+Write-Host "This may take several minutes..." -ForegroundColor Yellow
+Write-Host ""
+
+# Change to project root for build
+Push-Location $ProjectRoot
+
+try {
+    # Build command with all necessary flags
+    $BuildCommand = @(
+        "python", "-m", "nuitka",
+        "--onefile",
+        "--windows-console-mode=disable", 
+        "--standalone",
+        "--assume-yes-for-downloads",
+        "--enable-plugin=tk-inter",  
+        "--include-package-data=customtkinter", 
+        "--include-package-data=PIL",  
+        "--include-package-data=chromadb",  
+        "--include-package-data=llama_cpp",  
+        "--include-data-dir=$ProjectRoot\mati_data=mati_data",
+        "--include-data-dir=$ProjectRoot\scripts\data_collection\data\content=scripts\data_collection\data\content",
+        "--include-data-dir=$ProjectRoot\student_app\gui_app\images=student_app\gui_app\images",
+        "--module-parameter=torch-disable-jit=yes",
+        "--nofollow-import-to=sympy", 
+        "--nofollow-import-to=torch._inductor",
+        "--nofollow-import-to=torch._dynamo",
+        "--nofollow-import-to=torch.fx",
+        "--nofollow-import-to=torch.compiler",
+        "--nofollow-import-to=torch.distributed",
+        "--nofollow-import-to=torch.testing",
+        "--nofollow-import-to=torch.utils.tensorboard",
+        "--nofollow-import-to=torch.utils.cpp_extension",
+        "--nofollow-import-to=torch.onnx",
+        "--nofollow-import-to=torchvision",  
+        "--nofollow-import-to=torchaudio",  
+        "--nofollow-import-to=transformers",  
+        "--nofollow-import-to=clip",  
+        "--nofollow-import-to=matplotlib",
+        "--nofollow-import-to=sklearn",
+        "--nofollow-import-to=pytest",
+        "--nofollow-import-to=nibabel",
+        "--nofollow-import-to=unittest",
+        "--nofollow-import-to=IPython",
+        "--nofollow-import-to=notebook", 
+        "--output-filename=$OutputName",
+        "--output-dir=dist",
+        "--main=$BootstrapPath"  # Use bootstrap as entry point
+    )
+
+ 
+    $BuildCommand = $BuildCommand | Where-Object { $_ -ne "--windows-icon-from-ico=" }
+
+    Write-Host "Executing build command..." -ForegroundColor Cyan
+    Write-Host "Command: $($BuildCommand -join ' ')" -ForegroundColor Gray
+    Write-Host ""
+
+    & $BuildCommand[0] $BuildCommand[1..($BuildCommand.Length-1)]
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host ""
+        Write-Host "========================================" -ForegroundColor Green
+        Write-Host "Build Successful!" -ForegroundColor Green
+        Write-Host "========================================" -ForegroundColor Green
+        $OutputPath = Join-Path $ProjectRoot "dist\$OutputName"
+        if (Test-Path $OutputPath) {
+            $FileSize = (Get-Item $OutputPath).Length / 1MB
+            Write-Host "Output: $OutputPath" -ForegroundColor Green
+            Write-Host "Size: $([math]::Round($FileSize, 2)) MB" -ForegroundColor Green
+        }
+        Write-Host ""
+        Write-Host "The executable is ready for distribution!" -ForegroundColor Cyan
+    } else {
+        Write-Host ""
+        Write-Host "========================================" -ForegroundColor Red
+        Write-Host "Build Failed!" -ForegroundColor Red
+        Write-Host "========================================" -ForegroundColor Red
+        Write-Host "Check the error messages above for details." -ForegroundColor Yellow
+        exit 1
+    }
+} finally {
+    Pop-Location
+}
+

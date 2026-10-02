@@ -1,0 +1,298 @@
+# Mati 检索层配置
+#
+# 原先散落在 rag_retrieval_engine.py / anti_confusion_engine.py / qwen_handler.py /
+# rag_cache.py 中的硬编码阈值与权重集中到此处，便于标定与回归对比。
+# 加载器见 system/rag/retrieval_config.py。
+
+version: 1
+updated: 2026-10-02
+
+# ───────────────────────── 学科路由 ─────────────────────────
+# GUI 学科键 / 中文名 / 别名 ——> 规范 subject（与教材目录表一致）
+subject_aliases:
+  science: science
+  Science: science
+  科学: science
+  物理: science
+  化学: science
+  生物: science
+  math: math
+  Math: math
+  Mathematics: math
+  数学: math
+  chinese: chinese
+  Chinese: chinese
+  语文: chinese
+  english: english
+  English: english
+  "English Grammar": english
+  英语: english
+  英语语法: english
+  computer_science: computer_science
+  "Computer Science": computer_science
+  计算机: computer_science
+  计算机科学: computer_science
+  信息技术: computer_science
+  social_studies: social_studies
+  "Social Studies": social_studies
+  社会科学: social_studies
+  政治: social_studies
+  历史: social_studies
+  地理: social_studies
+
+# 细分学科（discipline）别名 ——> 规范 discipline 键。
+# 当学科家族下包含多个细分学科时（当前仅 science：物理/化学/生物），
+# 集合会按 discipline 拆分；此处让「物理」「physics」「生物」等写法都能定位到细分学科。
+discipline_aliases:
+  physics: physics
+  物理: physics
+  chemistry: chemistry
+  化学: chemistry
+  biology: biology
+  生物: biology
+  mathematics: mathematics
+  math: mathematics
+  数学: mathematics
+  chinese: chinese
+  语文: chinese
+  information_technology: information_technology
+  信息技术: information_technology
+  computer_science: information_technology
+
+# 细分学科 ——> 所属家族学科（集合名回退解析、以及旧库缺少 metadata 时用）
+discipline_to_subject:
+  physics: science
+  chemistry: science
+  biology: science
+  mathematics: math
+  chinese: chinese
+  information_technology: computer_science
+
+# 兜底集合：当学科路由未命中任何集合时使用（留空则不做兜底，宁可返回空也不串答案）
+fallback_collections: []
+
+# ───────────────────────── 路由策略 ─────────────────────────
+routing:
+  # 年级过滤强度：
+  #   soft（默认）—— 同家族**全部年级**的集合都参与召回，年级只决定集合排序与
+  #                  重排的 grade_affinity。避免「高二学生问必修三内容」被
+  #                  硬过滤挡掉后误判为"教材中未找到"（假拒答）。
+  #   hard        —— 年级精确命中时只返回该年级集合。搜索空间更小，
+  #                  但会因各校教学进度差异导致跨年级内容查不到。
+  # 本项目年级口径本身存在校际分歧（物理必修三征订标高一、实际多在高二上），
+  # 因此默认 soft。
+  grade_mode: soft
+
+  # soft 模式下的收窄规则：当「同年级」候选（grade_affinity >= 0.8）数量
+  # 达到本值时，丢弃跨年级候选 —— 同年级证据已经够用，就不必让跨年级噪声
+  # 占用本就紧张的证据预算；同年级不足时仍然保留全部年级（跨年级兜底）。
+  # 实测场景：问“什么是向心力”（高一）时，高二选必二讲「带电粒子在磁场中的
+  # 圆周运动」的块也会被召回，相关但不如必修二贴切。
+  same_grade_min_evidence: 2
+
+# 允许进入检索的集合名前缀（用于过滤非教材集合，如 neb_readme）
+collection_whitelist_prefixes:
+  - "neb_"
+
+# 排除的集合（README 等非教学内容，避免污染检索）
+collection_blacklist:
+  - "neb_readme"
+
+# ───────────────────────── 召回规模 ─────────────────────────
+# 三段式：候选池 -> 精排池 -> 证据池
+candidate_k_per_collection: 20   # 每个集合召回的块数（原实现被 min(2, n_results) 硬压到 2）
+rerank_k: 10                     # 融合后进入重排的块数
+evidence_k: 4                    # 最终送入模型的块数
+
+# ───────────────────────── 打分与阈值 ─────────────────────────
+# 说明：集合使用 cosine 空间，Chroma 返回 distance = 1 - cos，
+#       因此 base_score = 1 - distance 直接等于余弦相似度。
+min_base_score: 0.30             # 低于此余弦相似度的候选直接丢弃
+min_final_score: 0.40            # 融合/重排后的最终阈值
+
+# 特征加权重排（P1 引入，替代原先的 4 特征线性加权）。
+# 关键变化：来源权重由 0.15 进一步压到 0.05 —— 来源只是「轻微倾斜」，
+# 不允许压过相关性（原实现在 P0 之前是 0.30，会让同一相关性阈值随来源漂移）。
+# 所有权重在此可调可回归（scripts/eval_rag.py 可直接对比改动前后指标）。
+#
+# 说明：方案 §3.3 给出的是 6 特征表（无「年级亲和」）。此处**额外保留**
+# grade_affinity 作为第 7 特征 —— P0 刚修复了它的死分支（F3），直接删除
+# 属于功能回归；因此把 similarity 从 0.45 降到 0.40 来配平。
+rank_weights:
+  similarity: 0.40               # 余弦相似度
+  bm25: 0.20                     # BM25 关键词分（批内归一化）
+  term_coverage: 0.15            # 问题词元在块中的覆盖率（术语型问题的主要抓手）
+  structure_bonus: 0.10          # 结构信号：是否命中定义/例题/标题
+  source_priority: 0.05          # 来源优先级（教材 > 其他）
+  version: 0.05                  # 教材版本新旧（新版优先）
+  grade_affinity: 0.05           # 年级匹配（软加权，不做硬过滤；P0 F3 修复的延续）
+
+# 结构信号加权表（structure_bonus 特征）：内容类型 -> 分值（0–1）。
+# 目录/封面等噪声块取 0，配合检索侧过滤，避免它们占用证据预算。
+structure_bonus:
+  definition: 1.0                # 概念定义
+  theorem: 1.0                   # 定理/定律陈述
+  example: 0.8                   # 例题（含解题步骤）
+  exercise: 0.6                  # 练习
+  body: 0.7                      # 正文
+  figure_caption: 0.3            # 图注
+  toc: 0.0                       # 目录
+  cover: 0.0                     # 封面/版权页
+  default: 0.5
+
+# 来源优先级（0–1）
+source_priority:
+  neb: 1.0
+  openstax: 0.7
+  khanacademy: 0.65
+  default: 0.5
+
+# ───────────────────────── 知识治理（P2 / 方案 §3.4） ─────────────────────────
+# 入库侧：清洗、去重、冲突检测（见 system/rag/knowledge_governance.py）
+# 检索侧：默认排除条件（方案附录 A）
+governance:
+  # 检索时默认排除的内容类型。
+  # 为什么必须在**查询层**排除而不是靠 structure_bonus 降权：
+  # structure_bonus 只影响**排序**，不影响**召回** —— 目录/封面块照样会
+  # 占掉候选池名额与 BM25 语料位置，而它们对回答问题零贡献。
+  exclude_content_types: [toc, cover]
+  # 排除 status=archived 的已下架块（步骤 3.3.2）
+  exclude_archived: true
+
+  # 入库清洗：删掉版权块/页码孤行/页眉页脚/孤立图注编号
+  cleaning:
+    enabled: true
+    min_chars: 40                # 清洗后短于此长度视为噪声块
+    drop_copyright: true
+
+  # 去重（步骤 3.2）
+  dedup:
+    enabled: true
+    exact: true                  # sha256(归一化文本) 精确去重（零风险，先做）
+    # 语义去重阈值。方案原文写 0.92，实测**偏激进**：
+    # 教材里相邻小节的定义句式、例题的「解：」引导语本就高度相似，
+    # 0.92 会把它们判成重复并删掉，造成正文损失。
+    # 实测本库 >0.95 的重复对不足 0.5%，取 0.95 是收益与风险的平衡点。
+    semantic_threshold: 0.95
+    # 重复对里保留谁：longer（留信息更全的）| first
+    keep: longer
+
+  # 冲突检测（步骤 3.3.3）：产物写到该路径供人工复核
+  conflicts:
+    enabled: true
+    output: mati_data/conflicts.jsonl
+    # 只在**显式带 concept_key** 的块之间检测。没有 concept_key 时全库比较
+    # 会把「向心力是 3 N」和「重力是 5 N」判成冲突 —— 假警报会让人
+    # 不再相信这份报告，这比漏检更坏。
+    require_concept_key: true
+
+# ───────────────────────── 混合检索（P1） ─────────────────────────
+# 稠密向量路 + BM25 关键词路，用 RRF 融合。
+# RRF 只依赖排名不依赖分数尺度，规避「多路分数不可比」——
+# 这是 P0 里「来源权重污染阈值」同类问题的根治办法。
+hybrid:
+  enabled: true                  # 置 false 可复现 P0 的纯稠密行为（A/B 消融用）
+  rrf_k: 60                      # RRF 平滑常数（经验值，越小越突出头部）
+  dense_k: 20                    # 稠密路每集合召回数
+  bm25_k: 20                     # BM25 路每集合召回数
+  max_query_variants: 3          # 参与并查的改写变体上限（含原始查询）
+
+# ───────────────────────── Query 改写（P1） ─────────────────────────
+rewrite:
+  enabled: true
+  # 术语同义词扩展：零延迟（查表），多路并查
+  synonym_expansion: true
+  max_synonym_variants: 2        # 每个查询最多扩展出的同义变体数
+  # 子问题拆解：仅当出现连接词且问题足够长时触发（规则优先，不调模型）
+  subquery_split: true
+  subquery_min_chars: 10         # 短于该长度不做拆解（避免把简单问题拆碎）
+  max_subqueries: 2
+  # 检索失败落盘：供 pattern_miner 挖掘高频失败模式，反哺同义词表
+  failure_log: mati_data/retrieval_failures.jsonl
+  failure_score_threshold: 0.45  # 最高证据分低于此值记为「检索失败」
+
+# ───────────────────────── 切分与父子索引（P1） ─────────────────────────
+# 此前分块参数散落三处且不一致（摄取侧 0.1、chunker CLI 0.2、文档写 token）。
+# 现统一在此定义，摄取侧读取。
+chunking:
+  structure_aware: true          # 按标题层级 / 例题标记切分（而非纯定长）
+  child_target_chars: 384        # 子块目标长度（用于召回，短而精准）
+  child_min_chars: 120
+  child_overlap_ratio: 0.1
+  # 父块目标长度（用于生成，完整语义单元）。
+  # 定 1000 是**预算驱动**的：证据预算 2000 token，一个父块约 1000 token，
+  # 正好能同时放进 2 个父块。若设成 1400 则只能放 1 个，证据多样性下降。
+  parent_target_chars: 1000
+  parent_max_chars: 1300         # 父块硬上限（超过则按句子边界切开）
+  parent_child_index: true       # 子块召回、父块喂模型
+
+# ───────────────────────── 上下文预算 ─────────────────────────
+context_budget:
+  # 生成模型的实际窗口与输出上限（与 qwen_handler 的 Llama(n_ctx=...) / max_tokens 对齐）。
+  # 证据预算 = n_ctx - system_prompt - 对话历史 - max_output_tokens，动态计算。
+  n_ctx: 4096
+  max_output_tokens: 768
+  # 证据预算上限：实际取 min(动态计算值, 本值)。
+  # P1 由 1200 提到 2000 —— 引入父子索引后单个父块约 1000 字符（≈1000 token），
+  # 1200 的预算连**一个完整父块都放不下**，会退化成「截断父块」，
+  # 等于白做父子索引。Qwen2.5 支持 32768，本地只开 4096 是出于 CPU 延迟考虑，
+  # 2000 的证据预算在 4096 窗口内仍留有余量（system 约 340 / 输出 768）。
+  max_evidence_tokens: 2000
+  # 原实现在检索层按 1600 字符截断后，
+  # qwen_handler 又按 850 字符截断，导致 >45% 证据被静默丢弃。
+  tokens_per_char_cjk: 1.0        # 中文约 1 字符 ≈ 1 token
+  tokens_per_char_ascii: 0.30     # 英文约 3.3 字符 ≈ 1 token
+
+# ───────────────────────── 忠实度校验 ─────────────────────────
+grounding:
+  # 答案内容被检索证据覆盖的最低比例（中文二元组 / 英文词级）。
+  # 实测该指标对中文区分力很弱（有据答案 17%~79%，库外问题 12%），
+  # 因此**只用于降低置信度**，不触发免责横幅；硬判据交给「模型自认无据」。
+  # 注意不要用单汉字重叠 —— 对中文几乎没有区分度。
+  min_content_overlap: 0.15
+
+# ───────────────────────── 缓存 ─────────────────────────
+cache:
+  max_size: 100
+  ttl_seconds: 3600
+  semantic_threshold: 0.92       # 原调用点传 0.88，与默认值不一致，此处统一
+  cache_errors: false            # 错误/降级答案不入缓存（原实现会把错误文案缓存 1 小时）
+
+# ───────────────────────── 生成 ─────────────────────────
+generation:
+  # 是否要求模型输出 [n] 来源标记（P2 启用）。
+  #
+  # 编号与来源描述**全部由检索层生成**（见 knowledge_governance.build_citations），
+  # 模型只负责写 `[n]` —— 方案 §6 风险表对 1.5B 模型的对冲手段：
+  # 模型可以不听指令不写标记（我们只统计不惩罚），
+  # 但它**无法编造**「[7] 来自某本不存在的教材」，因为 7 号根本不存在。
+  require_citations: true
+  # 引用越界（模型写了超出实际证据数的编号）时的置信度折扣。
+  # 只降置信度、不改答案：编号写错不影响内容正确性，
+  # 擅自删改模型输出反而掩盖了问题（与 P0 忠实度校验同一原则）。
+  citation_penalty: 0.85
+  # 拒答判据：入选证据的最高**查询覆盖率**（中文二元组）低于该值即拒答。
+  #
+  # 为什么不用 final_score 做拒答阈值（实测教训）：
+  # final_score 含多项常量特征（来源/结构/版本/年级 ≈ 0.2 下限），且 BM25 是
+  # 批内相对分（每批必有一个候选拿满分）→ 负样本最高 0.78、正样本最低 0.46，
+  # 完全不可分。二元组覆盖率是绝对量，才具备可标定的物理含义。
+  #
+  # 取值来源：scripts/eval_rag.py 在 78 题评测集上的阈值扫描（不是拍脑袋）。
+  #   th=0.22 -> 拒答 75.0% / 误拒  0.0%
+  #   th=0.28 -> 拒答 91.7% / 误拒 10.6%   ← F1 最优，当前取值
+  #   th=0.34 -> 拒答 91.7% / 误拒 16.7%
+  # 教育场景下幻觉代价高于拒答，故取 F1 最优而非最低误拒；
+  # 若产品更看重"不误拒"，改 0.22 即可（误拒降到 0，代价是 4/12 负样本漏过）。
+  refuse_below_query_coverage: 0.28
+  # 零证据/不相关时直接拒答，不调用大模型（教育场景下幻觉的代价高于拒答）
+  refuse_when_no_evidence: true
+  # 创作类请求（写一篇散文/诗歌/作文…）直接拒答（P2 步骤 3.4.3）。
+  # 为什么需要独立开关：覆盖率判据在这个问题上完全失效 ——
+  # 「散文」「800」「字」在语文教材里天然高频，「帮我写一篇 800 字的散文」
+  # 的查询覆盖率高达 0.71，远高于阈值 0.28，于是被误判为「教材里有依据」。
+  # 覆盖率回答的是「词有没有出现」，回答不了「教材里有没有现成答案」。
+  # 判据与覆盖率正交，见 system/rag/knowledge_governance.is_creation_request。
+  refuse_creation_requests: true
+  # 输出后是否做忠实度校验（anti_confusion.check_grounding）
+  verify_grounding: true

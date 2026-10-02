@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mati RAG 优化方案 v1.0</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --bg-soft:#f6f8fa;
+    --bg-card:#ffffff;
+    --border:#e2e5e9;
+    --border-strong:#cfd5dc;
+    --text:#1f2328;
+    --text-soft:#59636e;
+    --text-mute:#8b949e;
+    --accent:#0b64d0;
+    --accent-soft:#e8f1fd;
+    --p0:#c0201f;
+    --p0-bg:#fdeceb;
+    --p1:#b3690a;
+    --p1-bg:#fdf3e3;
+    --p2:#1a7f4b;
+    --p2-bg:#e9f7ef;
+    --code-bg:#f4f6f8;
+    --code-border:#e2e5e9;
+    --shadow:0 1px 2px rgba(27,31,36,.06),0 1px 3px rgba(27,31,36,.04);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;background:var(--bg-soft);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;
+  }
+  .layout{display:flex;align-items:flex-start;max-width:1400px;margin:0 auto;gap:28px;padding:0 24px 80px;}
+
+  /* ---------- 侧边目录 ---------- */
+  nav.toc{
+    position:sticky;top:24px;flex:0 0 250px;max-height:calc(100vh - 48px);
+    overflow-y:auto;padding:20px 0;margin-top:24px;
+    font-size:13.5px;line-height:1.6;
+  }
+  nav.toc .toc-title{
+    font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--text-mute);font-weight:600;margin:0 0 10px 12px;
+  }
+  nav.toc a{
+    display:block;padding:5px 12px;color:var(--text-soft);text-decoration:none;
+    border-left:2px solid transparent;border-radius:0 5px 5px 0;
+  }
+  nav.toc a:hover{background:#eef1f4;color:var(--text);}
+  nav.toc a.sub{padding-left:26px;font-size:13px;color:var(--text-mute);}
+  nav.toc a.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:600;}
+
+  /* ---------- 主内容 ---------- */
+  main{
+    flex:1;min-width:0;background:var(--bg-card);border:1px solid var(--border);
+    border-radius:12px;box-shadow:var(--shadow);
+    padding:44px 52px 64px;margin-top:24px;
+  }
+  header.doc-head{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:36px;}
+  header.doc-head h1{font-size:30px;line-height:1.3;margin:0 0 14px;letter-spacing:-.01em;}
+  .meta-list{list-style:none;padding:0;margin:0;font-size:13.5px;color:var(--text-soft);}
+  .meta-list li{padding:2px 0;}
+  .meta-list strong{color:var(--text);font-weight:600;}
+  .tag-version{
+    display:inline-block;background:var(--accent-soft);color:var(--accent);
+    font-size:12px;font-weight:600;padding:2px 9px;border-radius:20px;margin-left:8px;vertical-align:middle;
+  }
+
+  h2{
+    font-size:22px;margin:52px 0 18px;padding-bottom:10px;
+    border-bottom:1px solid var(--border);letter-spacing:-.005em;
+  }
+  h2:first-of-type{margin-top:0;}
+  h3{font-size:17.5px;margin:34px 0 14px;color:#111;}
+  h4{font-size:15.5px;margin:24px 0 10px;color:#222;}
+  p{margin:11px 0;}
+  ul,ol{margin:11px 0;padding-left:24px;}
+  li{margin:5px 0;}
+  a{color:var(--accent);}
+
+  code{
+    background:var(--code-bg);border:1px solid var(--code-border);border-radius:4px;
+    padding:1.5px 5px;font-size:12.8px;
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    word-break:break-word;
+  }
+  pre{
+    background:var(--code-bg);border:1px solid var(--code-border);border-radius:8px;
+    padding:14px 16px;overflow-x:auto;font-size:12.8px;line-height:1.65;margin:14px 0;
+  }
+  pre code{background:none;border:none;padding:0;font-size:inherit;}
+
+  /* ---------- 表格 ---------- */
+  .tw{overflow-x:auto;margin:16px 0;border:1px solid var(--border);border-radius:8px;}
+  table{border-collapse:collapse;width:100%;font-size:13.6px;}
+  th{
+    background:var(--bg-soft);text-align:left;font-weight:600;color:#333;
+    padding:9px 13px;border-bottom:1px solid var(--border-strong);white-space:nowrap;
+  }
+  td{padding:9px 13px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.6;}
+  tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#fafbfc;}
+
+  /* ---------- 徽章 ---------- */
+  .b{display:inline-block;font-size:11.5px;font-weight:700;padding:1.5px 7px;border-radius:4px;letter-spacing:.02em;white-space:nowrap;}
+  .b-p0{background:var(--p0-bg);color:var(--p0);}
+  .b-p1{background:var(--p1-bg);color:var(--p1);}
+  .b-p2{background:var(--p2-bg);color:var(--p2);}
+  .b-ok{background:#eef1f4;color:var(--text-soft);}
+
+  /* ---------- 提示块 ---------- */
+  .callout{
+    border-left:4px solid var(--accent);background:var(--accent-soft);
+    border-radius:0 8px 8px 0;padding:14px 18px;margin:18px 0;font-size:14px;
+  }
+  .callout.warn{border-left-color:#d1242f;background:#fdeceb;}
+  .callout.warn strong{color:#a0111b;}
+  .callout.note{border-left-color:#b3690a;background:#fdf6e9;}
+  .callout .ct{display:block;font-weight:700;margin-bottom:4px;font-size:13px;letter-spacing:.02em;}
+  .callout p:first-of-type{margin-top:0;}
+  .callout p:last-child{margin-bottom:0;}
+
+  /* ---------- 流程图 ---------- */
+  .flow{
+    background:var(--bg-soft);border:1px solid var(--border);border-radius:8px;
+    padding:18px 20px;overflow-x:auto;margin:18px 0;
+  }
+  .flow pre{background:none;border:none;padding:0;margin:0;font-size:12.5px;line-height:1.9;color:#3a4149;}
+
+  /* ---------- 阶段卡片 ---------- */
+  .phase{
+    border:1px solid var(--border);border-radius:10px;margin:22px 0;overflow:hidden;
+  }
+  .phase > .ph{
+    background:var(--bg-soft);padding:11px 18px;font-weight:700;font-size:14.5px;
+    border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .phase > .pb{padding:6px 18px 16px;}
+  .step{border-top:1px solid var(--border);padding:16px 0 4px;margin-top:12px;}
+  .step:first-child{border-top:none;margin-top:0;padding-top:8px;}
+  .step h4{margin:0 0 10px;font-size:15px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;}
+  .step h4 .no{
+    flex:0 0 auto;background:#eef1f4;color:var(--text-soft);font-size:11.5px;
+    font-weight:700;padding:2px 7px;border-radius:4px;
+  }
+  .lbl{font-weight:700;color:#333;}
+  .lbl.act{color:#0b64d0;}
+  .lbl.file{color:#8250df;}
+  .lbl.acc{color:#1a7f4b;}
+
+  hr{border:none;border-top:1px solid var(--border);margin:40px 0;}
+  .foot{margin-top:44px;padding-top:22px;border-top:1px solid var(--border);font-size:13px;color:var(--text-mute);}
+
+  @media(max-width:1080px){
+    nav.toc{display:none;}
+    main{margin-top:16px;padding:28px 22px 48px;}
+    .layout{padding:0 14px 60px;}
+  }
+  @media print{
+    nav.toc{display:none;} body{background:#fff;}
+    main{border:none;box-shadow:none;padding:0;margin:0;}
+    h2{page-break-after:avoid;} .phase{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">目录</div>
+  <a href="#s0">0 · 一页速览</a>
+  <a href="#s1">1 · 优化目标与适用场景</a>
+  <a href="#s1-1" class="sub">1.1 服务对象与场景</a>
+  <a href="#s1-2" class="sub">1.2 硬约束</a>
+  <a href="#s1-3" class="sub">1.3 分四层目标</a>
+  <a href="#s1-4" class="sub">1.4 适用 / 不适用</a>
+  <a href="#s2">2 · 现状诊断</a>
+  <a href="#s2-1" class="sub">2.1 现状链路</a>
+  <a href="#s2-2" class="sub">2.2 问题清单 A–I</a>
+  <a href="#s2-3" class="sub">2.3 错因归因</a>
+  <a href="#s3">3 · 策略与实施步骤</a>
+  <a href="#s3-1" class="sub">3.1 策略总览</a>
+  <a href="#s3-2" class="sub">3.2 阶段一 P0</a>
+  <a href="#s3-3" class="sub">3.3 阶段二 P1</a>
+  <a href="#s3-4" class="sub">3.4 阶段三 P2</a>
+  <a href="#s3-5" class="sub">3.5 阶段四 P3</a>
+  <a href="#s4">4 · 资源与技术要点</a>
+  <a href="#s5">5 · 评估指标与预期效果</a>
+  <a href="#s6">6 · 风险与回滚</a>
+  <a href="#sa">附录 A · 元数据 Schema</a>
+  <a href="#sb">附录 B · 问题—证据速查</a>
+  <a href="#sc">附录 C · 参考来源</a>
+</nav>
+
+<main>
+<header class="doc-head">
+  <h1>Mati RAG 优化方案<span class="tag-version">v1.0</span></h1>
+  <ul class="meta-list">
+    <li><strong>日期：</strong>2026-10-01</li>
+    <li><strong>适用对象：</strong>mati-master 项目 RAG 链路（Chroma 向量库 + bge-small-zh-v1.5 + Qwen2.5-1.5B-Instruct，单机 CPU 离线运行）</li>
+    <li><strong>方法论来源：</strong>《工业级的 RAG 优化选型》（语雀 sealearn 组织 wiki）+ 本项目实际代码与索引实测诊断</li>
+    <li><strong>配套阅读：</strong>docs/调研笔记-RAG检索层与AI推理层.md、docs/TECHNICAL_IMPLEMENTATION.md</li>
+  </ul>
+</header>
+
+<!-- ================= 0 ================= -->
+<h2 id="s0">0. 一页速览</h2>
+<div class="tw">
+<table>
+<thead><tr><th>环节</th><th>现状</th><th>最关键的问题</th><th>优化策略</th><th>优先级</th></tr></thead>
+<tbody>
+<tr><td>知识工程（入库）</td><td>2 个集合、231 块、2/6 本教材</td><td>学科覆盖断裂；元数据只有 4 个字段且 <code>grade</code> 全为 <code>unknown</code></td><td>全量重建索引 + 元数据补全 + 内容去噪</td><td><span class="b b-p0">P0</span></td></tr>
+<tr><td>Chunk 切分</td><td>512 字符 / 10% 重叠</td><td><strong>中文句子边界正则失效 → 实际按 512 字符硬切</strong></td><td>中文标点感知 + 标题层级 + 父子索引</td><td><span class="b b-p0">P0</span></td></tr>
+<tr><td>Query 改写</td><td>仅错别字/口语纠正</td><td>无同义扩展、无子问题拆解</td><td>术语同义词表 + 小模型改写兜底</td><td><span class="b b-p1">P1</span></td></tr>
+<tr><td>检索召回</td><td>纯稠密单路，每集合只取 2 条</td><td><strong>top-k 被硬压到 2</strong>；相似度用 <code>1 − L2距离</code> 冒充余弦</td><td>放宽 top-k + BM25 混合召回 + RRF 融合</td><td><span class="b b-p0">P0</span> / <span class="b b-p1">P1</span></td></tr>
+<tr><td>排序 Rerank</td><td>线性加权，来源权重占 30%</td><td>来源权重压过相关性；<strong>阈值随来源漂移</strong></td><td>特征加权重排 + 可选 cross-encoder</td><td><span class="b b-p1">P1</span></td></tr>
+<tr><td>上下文截断</td><td>1600 字符 → 再截 850 字符</td><td><strong>二次截断丢弃 &gt;45% 证据</strong>；<code>break</code> 丢高分块</td><td>统一 token 预算 + 价值排序保留</td><td><span class="b b-p0">P0</span></td></tr>
+<tr><td>可信生成</td><td>Prompt 约束 + 死代码校验</td><td><strong><code>validate_grounding</code> 从未被调用</strong>；中文失效</td><td>引用标记 + 中文忠实度校验 + 拒答策略</td><td><span class="b b-p2">P2</span></td></tr>
+<tr><td>评估闭环</td><td>无评测集</td><td>只有 18 个"返回 dict"式结构断言</td><td>建评测集 + 分阶段评测 + 反馈回流</td><td><span class="b b-p2">P2</span> / <span class="b b-p2">P3</span></td></tr>
+<tr><td>系统指标</td><td>置信度恒 0.3</td><td><strong>中文 <code>split()</code> 数词导致置信度失真</strong></td><td>复用已有 CJK 感知分词</td><td><span class="b b-p0">P0</span></td></tr>
+</tbody>
+</table>
+</div>
+<div class="callout warn">
+  <span class="ct">核心判断</span>
+  <p>当前 RAG 的上限不在模型，而在<strong>「检索不到 + 证据被丢弃 + 无法度量」</strong>。因此优化顺序必须先修链路正确性，再谈召回率提升。在证据都没送到模型面前的时候，换更大的模型是浪费。</p>
+</div>
+
+<!-- ================= 1 ================= -->
+<h2 id="s1">1. 优化目标与适用场景</h2>
+
+<h3 id="s1-1">1.1 服务对象与使用场景</h3>
+<div class="tw">
+<table>
+<thead><tr><th>维度</th><th>现状</th></tr></thead>
+<tbody>
+<tr><td>直接使用者</td><td>中学生（单机 GUI 问答，<code>student_app/gui_app/</code>）</td></tr>
+<tr><td>交互形态</td><td>自然语言提问 → 流式答案 + 溯源信息 + 可选示意图</td></tr>
+<tr><td>典型问法</td><td>概念解释（"什么是向心力"）、公式/定理理解、教材例题讲解、多轮追问（"为什么""再举个例子"）</td></tr>
+<tr><td>间接使用者</td><td>后续的教师端 / 内容同步（<code>tools/sync_client.py</code>、<code>ingest_manifest</code>）</td></tr>
+<tr><td>内容源</td><td><code>textbooks/</code>（6 本人教版物理 PDF）、<code>notes/</code>、<code>scripts/data_collection/data/</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="s1-2">1.2 硬约束（选型的边界条件，不可忽略）</h3>
+<ol>
+  <li><strong>CPU 单机</strong>：目标机型为 i3 级处理器，<code>torch.set_num_threads(2)</code> 与 llama.cpp <code>n_threads=4</code> 会争抢 CPU。</li>
+  <li><strong>离线优先</strong>：已通过 <code>HF_HUB_OFFLINE</code> + <code>hf-mirror</code> 镜像解决网络问题，新增模型必须能离线缓存。</li>
+  <li><strong>上下文窗口小</strong>：Qwen2.5-1.5B 加载为 <code>n_ctx=2048</code>，system prompt + 历史 + 证据 + 输出共用这 2048 token。<strong>这是"多召回证据"的物理上限。</strong></li>
+  <li><strong>内存受限</strong>：模型文件约 1.04 GB，<code>SentenceTransformer</code> 在引擎 <code>__init__</code> 即常驻。再加 reranker 需评估内存。</li>
+  <li><strong>无 GPU</strong>：所有重排/改写必须按 CPU 延迟定价，交互式问答可容忍的额外延迟上限约 <strong>1.5–2 s</strong>。</li>
+</ol>
+
+<h3 id="s1-3">1.3 优化目标（分四层，逐层验收）</h3>
+<div class="tw">
+<table>
+<thead><tr><th>层级</th><th>目标</th><th>可验证的成功定义</th></tr></thead>
+<tbody>
+<tr><td><strong>T1 可用性</strong></td><td>检索"真的能命中"</td><td>6 本教材全部入库；GUI 每个学科选项都能选中非空集合；数学/英语/计算机不再零上下文</td></tr>
+<tr><td><strong>T2 正确性</strong></td><td>分数语义正确、证据不丢失</td><td>相似度改用真实余弦；top-k 不再被硬压；检索到的证据完整进入模型</td></tr>
+<tr><td><strong>T3 可信性</strong></td><td>有据可依、可溯源、不编造</td><td>答案可标注来源块；上下文无支撑时明确拒答而非编造；引用准确率达标</td></tr>
+<tr><td><strong>T4 可度量</strong></td><td>效果可量化、可回归</td><td>有 ≥100 题评测集；每次参数变更自动出 Recall / 忠实度报告</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="s1-4">1.4 适用与不适用场景</h3>
+<h4>本方案适用</h4>
+<ul>
+  <li>教材/教辅这类<strong>结构清晰、术语密集、需要精确引用</strong>的知识问答。</li>
+  <li>单机、离线、低配 CPU 环境。</li>
+  <li>需要"答不出来就说不确定"的教育场景（幻觉的代价高于拒答）。</li>
+</ul>
+<h4>本方案不适用 / 需另做设计</h4>
+<ul>
+  <li>多跳推理型问题（需要 GraphRAG，本方案仅预留接口，见 §3.4）。</li>
+  <li>大规模并发服务（当前为进程内单例 + 无锁缓存，见 <code>rag_cache.py</code>）。</li>
+  <li>多模态（图片、音频）检索，需要单独的视觉/语音链路。</li>
+  <li>需要强化学习训练生成模型的方案（语雀文档中的 GRPO 证据约束 RL）—— <strong>本地 1.5B + CPU 环境不具备训练条件，本方案以规则与 Prompt 约束替代，并在 §6 中说明取舍。</strong></li>
+</ul>
+
+<!-- ================= 2 ================= -->
+<h2 id="s2">2. 当前 RAG 流程与关键问题诊断</h2>
+
+<h3 id="s2-1">2.1 现状链路</h3>
+<div class="flow"><pre>用户提问
+  │
+  ├─ [GUI] normalize 一次（AdaptiveNormalizer）              ← 归一化 #1
+  │
+  └─ RAGRetrievalEngine.query(query_text, subject, ...)
+        │  ※ 无 grade 参数
+        ├─ edge_case_handler.check_edge_cases()               ← 兜底
+        ├─ normalize 第二次（AdaptiveNormalizer）              ← 归一化 #2（重复）
+        ├─ RAGCache.get() / find_similar(0.88)                 ← 缓存
+        ├─ _get_relevant_collections(subject, "")              ← 学科路由（grade 传空串）
+        │     └─ subject_map 指向 7 个 DB 中不存在的集合
+        ├─ embedding_gen.generate_query_embeddings()           ← 加 BGE 查询指令，归一化
+        ├─ 逐集合 query(n_results=min(2, n_results))           ← top-k 硬压到 2
+        │     score = 1.0 - L2_distance                        ← 分数语义错误
+        ├─ anti_confusion.rank_results()                       ← 线性加权：0.7*相似度 + 0.3*来源
+        ├─ 阈值过滤 final_score >= 0.35（字符累计 1600 后 break）
+        ├─ anti_confusion.resolve_conflicts()                  ← 仅把 NEB 排前面
+        └─ qwen_handler.get_answer_stream()
+              └─ context 再截断到 850 字符                      ← 二次截断
+                    ↓
+                 流式答案 + confidence（恒 0.3）</pre></div>
+
+<h3 id="s2-2">2.2 关键问题清单</h3>
+<p>问题按「严重程度 × 修复成本」排序。每条均给出代码证据，可逐条复核。</p>
+
+<h4>A. 知识工程与入库 <span class="b b-p0">P0</span></h4>
+
+<p><strong>A1｜知识覆盖率断裂：6 本教材只入库 2 本</strong></p>
+<ul>
+  <li><span class="lbl">现象：</span><code>textbooks/</code> 下有 6 个物理 PDF，向量库中只有 2 本。</li>
+  <li><span class="lbl">证据：</span><code>mati_data/chroma_db/chroma.sqlite3</code> 实测 —— <code>neb_science</code>：226 块（人教版物理必修二 171 块，id <code>0–170</code>；必修三 55 块，id <code>171–225</code>）；<code>neb_readme</code>：5 块（<code>textbooks/README.md</code>）；合计 231 块，库体积 8.7 MB。</li>
+  <li><span class="lbl">影响：</span>询问其余 4 本教材的内容时，检索必然落空，模型退化为纯参数化回答 —— <strong>这是当前"答不准"最直接的原因</strong>。</li>
+  <li><span class="lbl">次生问题：</span><code>neb_readme</code> 是 README 文本，会污染检索结果（空 subject 时 <code>neb_</code> 前缀可命中所有集合）。</li>
+</ul>
+
+<p><strong>A2｜学科路由指向不存在的集合，数学/英语/计算机完全无上下文</strong></p>
+<ul>
+  <li><span class="lbl">证据：</span><code>rag_retrieval_engine.py:119-135</code> 的 <code>subject_map</code> 引用了 <code>openstax_science</code>、<code>scienceqa</code>、<code>finemath</code>、<code>gsm8k</code>、<code>cs_stanford</code>、<code>fineweb_edu</code>、<code>khanacademy_pedagogy</code> 共 7 个集合，而 DB 中只有 <code>neb_science</code> 和 <code>neb_readme</code>。<code>main_window.py:38-44</code> 的 GUI 学科键与 map 的键也未完全对齐（如 GUI 的 <code>English Grammar</code> vs map 的 <code>english</code>）。</li>
+  <li><span class="lbl">影响：</span>实测除 <code>Science</code> 外，<code>Math</code> / <code>Mathematics</code> / <code>Computer Science</code> / <code>English Grammar</code> 等全部返回空集合 → 检索为空 → 直接进入纯 LLM 生成。三层 fallback（<code>:148-155</code>）同样因为集合不存在而失效。</li>
+</ul>
+
+<p><strong>A3｜年级维度形同虚设</strong></p>
+<ul>
+  <li><span class="lbl">证据：</span><code>query()</code> 签名（<code>rag_retrieval_engine.py:160-168</code>）<strong>没有 <code>grade</code> 参数</strong>，内部固定传 <code>""</code>（<code>:244</code>）；<code>_get_relevant_collections</code> 中 <code>neb_{subject}_grade_{grade}</code> 因此永远匹配不上，只剩 <code>startswith</code> 兜底；摄取侧 <code>extract_metadata</code>（<code>ingest_content.py:337-349</code>）从文件名解析年级，<code>2025人教版物理必修二.pdf</code> 无法解析出 1–12 的数字 → <code>grade="unknown"</code>，DB 内实测<strong>所有块 grade 均为 <code>unknown</code></strong>；查询也没有 <code>where=</code> 元数据过滤。</li>
+  <li><span class="lbl">影响：</span>文档承诺的"按学科 + 年级过滤"在代码中不存在。<code>anti_confusion_engine.py:104-107</code> 的年级加权分支因 <code>grade_str</code> 是 <code>"unknown"</code> 而恒不命中。</li>
+</ul>
+
+<p><strong>A4｜<code>ingest_directory</code> 路径存在跨文件 ID 覆盖缺陷（潜在，尚未爆发）</strong></p>
+<ul>
+  <li><span class="lbl">证据：</span><code>ingest_content.py:421</code> — <code>ids = [f"{collection_name}_{i}" for i in range(len(chunks))]</code>，ID 仅由「集合名 + 块序号」组成，<strong>不含文件名或内容哈希</strong>。配合 <code>upsert</code>（<code>:433</code>），同一集合内第二个文件的 <code>_0..._n</code> 会覆盖第一个文件的同序号块。</li>
+  <li><span class="lbl">当前为何没炸：</span>现有索引 ID 是连续的 <code>0–170</code> / <code>171–225</code>，说明它是由 <code>ingest_manifest</code> 路径写入的（该路径使用包内预分配的全局唯一 <code>chunk["id"]</code>，见 <code>tools/package_builder.py:163</code>）。</li>
+  <li><span class="lbl">风险：</span>一旦用 <code>python scripts/ingest_content.py --input textbooks</code> 走目录摄取路径补齐另外 4 本教材，<strong>已入库的 2 本会被静默覆盖</strong>。</li>
+</ul>
+
+<p><strong>A5｜入库内容含噪声，无清洗与去重</strong></p>
+<ul>
+  <li><span class="lbl">证据：</span>抽取到的块中包含封面版权页、目录、图注、页码等。例如某块内容为 <code>"全国优秀教材二等奖\n物理\n第二册\n必 修..."</code>，另一块是整页目录。</li>
+  <li><span class="lbl">影响：</span>这类块与用户问题语义距离近（都含学科词汇），容易被召回并占用本就紧张的上下文预算。无任何去重逻辑（既无哈希去重也无语义去重）。</li>
+</ul>
+
+<p><strong>A6｜分块参数三处不一致</strong></p>
+<ul>
+  <li>摄取侧：<code>EnhancedChunker(chunk_size=512, overlap_ratio=0.1)</code>（<code>ingest_content.py:114</code>）</li>
+  <li>Chunker CLI 默认：<code>--overlap 0.2</code>（<code>enhanced_chunker.py:438</code>）</li>
+  <li>文档宣称：<code>"512 token / 10% 重叠"</code>（<code>readme.md:183</code>、<code>HOW_TO_PROCESS.md:163</code>），实际单位是<strong>字符数</strong>而非 token（<code>enhanced_chunker.py:55</code>）。</li>
+</ul>
+
+<h4>B. Chunk 切分 <span class="b b-p0">P0</span> —— 最技术性、也最容易被忽视的问题</h4>
+
+<div class="callout warn">
+  <span class="ct">B1｜中文句子边界识别完全失效，实际退化为"每 512 字符硬切"</span>
+  <p><span class="lbl">证据：</span><code>enhanced_chunker.py:175</code></p>
+  <pre><code>for match in re.finditer(r'[.!?]\s+', text):</code></pre>
+  <ul>
+    <li>字符类里<strong>没有中文标点</strong>（<code>。</code>、<code>！</code>、<code>？</code>、<code>；</code>）；</li>
+    <li>即使补上中文标点，<code>\s+</code> 要求标点后必须有空白字符，而中文行文标点后通常直接接字；</li>
+    <li>兜底逻辑（<code>:264-268</code>）用 <code>text.rfind(' ')</code> 找空格，<strong>中文段落内没有空格</strong> → <code>safe_split</code> 保持 <code>target_end</code> 不变 → 直接按 512 字符切断。</li>
+  </ul>
+  <p><span class="lbl">影响：</span><code>"Math-aware chunking"</code> 的设计意图在中文文档上完全落空。一个完整的定理陈述、一道例题的题干与解析、一段公式推导，都会被 512 字符的硬边界从中间切开。这正是语雀文档强调的 <strong>"切块策略导致上下文不连贯，步骤 A/B 被拆分无法一起召回"</strong> 的原型。</p>
+</div>
+
+<p><strong>B2｜没有任何结构感知切分</strong></p>
+<ul>
+  <li>PDF 抽取后直接进 chunker，<strong>章节标题、小节号、例题标记、图注均未被识别为结构信号</strong>。</li>
+  <li>Markdown 标题（<code>#</code>/<code>##</code>）在 <code>smart_chunk_with_overlap</code> 内未被利用，只有 <code>chunk_markdown_file</code> 会解析 YAML frontmatter（<code>:332-345</code>），而 <code>ingest_directory</code> 根本没走这个函数。</li>
+</ul>
+
+<p><strong>B3｜无父子索引</strong> —— 召回单元 = 生成单元，二者被绑死在 512 字符。语雀文档给出的解法正是<strong>父子索引</strong>：子块（小、精准）用于召回，父块（大、完整语义）用于喂给 LLM。</p>
+
+<h4>C. Query 改写 <span class="b b-p1">P1</span></h4>
+<p><strong>C1｜只有"纠错"，没有"改写"</strong></p>
+<ul>
+  <li>现有能力是 <code>AdaptiveNormalizer</code>（<code>system/input_processing/adaptive_normalizer.py</code>）—— 拼写纠正、口语化归一、语种检测、低置信样例落盘（<code>low_confidence_cases.jsonl</code>）。</li>
+  <li><strong>没有：</strong>同义扩展（"自由落体" ↔ "自由下落"）、术语规范化、子问题拆解（"平抛运动的规律和斜抛有什么区别" 是两个问题）。</li>
+  <li><strong>额外问题：</strong>GUI 先归一化一次，引擎内 <code>rag_retrieval_engine.py:205</code> 又用 <code>AdaptiveNormalizer</code> 归一化一次，<strong>同一问题被归一化两遍</strong>，第二次的输入已是改写结果，可能引入二次偏差。</li>
+</ul>
+<p><strong>C2｜已有反馈数据但未接入改写</strong> —— <code>pattern_miner.py</code> + <code>low_confidence_cases.jsonl</code> 已经是一套低置信样例挖掘机制，但没有与检索失败（零召回/低分）关联，无法形成"改写策略 ← 检索效果"的闭环。</p>
+
+<h4>D. 检索召回 <span class="b b-p0">P0</span> / <span class="b b-p1">P1</span> —— 召回能力被三重削弱</h4>
+
+<div class="callout warn">
+  <span class="ct">D1｜top-k 被硬压到 2</span>
+  <p><span class="lbl">证据：</span><code>rag_retrieval_engine.py:257</code></p>
+  <pre><code>n_results=min(2, n_results)</code></pre>
+  <p>调用链上 <code>main_window.py:803</code> 根本不传 <code>n_results</code>，所以取默认 3 → <code>min(2, 3) = 2</code>。<strong>即使路由到 3 个集合，候选池也只有 6 条。</strong>6 条候选里再按字符数截到 1600、按阈值 0.35 过滤，实际进入模型的往往只有 1–2 条。对比语雀方法论：工业级方案候选池通常是 20–50 条，<strong>当前比业界小一个数量级</strong>。</p>
+</div>
+
+<p><strong>D2｜相似度分数语义错误：用 <code>1 − L2距离</code> 冒充余弦相似度</strong></p>
+<ul>
+  <li><code>rag_retrieval_engine.py:266</code> — <code>'score': 1.0 - res['distances'][0][i]</code></li>
+  <li>集合 schema 实测为 <code>"space":"l2"</code>（<code>chroma.sqlite3</code> 的 <code>collections.schema_str</code>），HNSW 参数 <code>ef_construction=100, max_neighbors=16, ef_search=100</code>。</li>
+  <li>下游 <code>anti_confusion_engine.py:96</code> 注释与命名把它当余弦用（<code># Cosine similarity</code>）。</li>
+  <li>而缓存侧 <code>rag_cache.py:124</code> 用的是<strong>正确的</strong>余弦（归一化点积）—— <strong>同一系统内两套不一致的相似度度量</strong>。</li>
+  <li><span class="lbl">推导：</span>嵌入向量已归一化，L2 距离 <code>d = √(2 − 2cos)</code>，因此 <code>score = 1 − d ≈ 2cos − 1</code>。同向 → 1.0，正交 → −0.414，反向 → −1.0。排序顺序尚能保持（单调），但<strong>阈值的物理含义完全错位</strong>，且随来源权重漂移（见 D4）。</li>
+</ul>
+
+<p><strong>D3｜纯稠密单路检索，没有关键词召回</strong></p>
+<ul>
+  <li>没有 BM25、没有 FTS、没有混合检索。对本项目最具体的危害：物理学科有大量<strong>术语与符号密集</strong>的问法 —— "向心加速度""万有引力常量 G""平抛运动" —— 靠 512 维小模型做语义匹配时容易与近邻概念混淆（"向心力" vs "离心力"）。<strong>精确匹配恰恰是 BM25 的强项，而当前完全缺位。</strong></li>
+  <li>另注：Chroma 内部其实建了文档的 FTS 索引（schema 中 <code>"#document":{"fts_index":{"enabled":true}}</code>，库中亦有 <code>embedding_fulltext_search*</code> 表），但代码完全未使用。</li>
+</ul>
+
+<p><strong>D4｜来源权重压过相关性，导致阈值随来源漂移</strong></p>
+<ul>
+  <li><span class="lbl">证据：</span><code>anti_confusion_engine.py:102</code> — <code>weighted_score = (base_score * 0.7) + ((priority_score / 100.0) * 0.3)</code>，来源优先级权重占 <strong>30%</strong>，远超其应有的"轻微倾斜"作用。</li>
+  <li><span class="lbl">后果（实测推算）：</span>阈值 <code>final_score &gt;= 0.35</code>（<code>rag_retrieval_engine.py:284</code>）
+    <ul>
+      <li>NEB 来源块（priority=100，贡献 0.3）：需要 <code>1-d ≥ 0.0714</code> → 约 <strong>cos ≥ 0.57</strong></li>
+      <li>外部来源块（priority=60，贡献 0.18）：需要 <code>1-d ≥ 0.243</code> → 约 <strong>cos ≥ 0.71</strong></li>
+    </ul>
+    → <strong>同一个"相关性阈值"，对不同来源实际执行了不同的严格程度。</strong>由于 A5 已证实库中存在大量噪声块，一条相关性仅 0.57 的 NEB 噪声块（如封面页、目录页）能通过，而一条相关性 0.65 的优质外部块会被丢弃 —— 这个偏差是<strong>实际在起作用的</strong>。</li>
+</ul>
+
+<p><strong>D5｜学科路由与集合命名耦合脆弱</strong> —— 集合名由文件名推断（<code>ingest_content.py:351-360</code>）；<code>neb_readme</code> 这类"意外集合"会因 <code>neb_</code> 前缀兜底被命中（<code>rag_retrieval_engine.py:112</code>）。</p>
+
+<p><strong>D6｜HNSW 参数为默认值，未针对小库调优</strong> —— 库仅 231 条向量，本可把 <code>ef_search</code> 从 100 提到 200–400 <strong>几乎零成本</strong>换取更高召回；反而在候选池仅 2 条的情况下，其收益被 top-k 硬压完全吃掉。</p>
+
+<h4>E. 上下文组装与截断 <span class="b b-p0">P0</span> —— 这里丢掉的证据最多</h4>
+
+<div class="callout warn">
+  <span class="ct">E1｜两次截断，证据被丢弃 &gt;45%，且第二次是静默的</span>
+  <div class="tw">
+  <table>
+  <thead><tr><th>位置</th><th>限制</th><th>单位</th></tr></thead>
+  <tbody>
+  <tr><td><code>rag_retrieval_engine.py:281</code></td><td><code>limit = 1600</code></td><td>字符</td></tr>
+  <tr><td><code>qwen_handler.py:100-108</code></td><td><code>len(context) &gt; 850</code> → 截断</td><td>字符</td></tr>
+  </tbody>
+  </table>
+  </div>
+  <p>检索层辛苦凑到 1600 字符的证据 → 拼成 <code>full_context_str</code> → <code>get_answer_stream()</code> → <code>_build_prompt</code> 里<strong>发现超过 850 就直接砍掉一半</strong>，只保留前 850 字符并在句号处对齐。这意味着<strong>辛苦召回的证据有一半以上从未到达模型</strong>，而且这个截断没有任何日志、没有降级提示，从上层完全不可观测。</p>
+</div>
+
+<p><strong>E2｜截断策略用 <code>break</code> 而非 <code>continue</code>，高分块可能被跳过</strong></p>
+<pre><code>for chunk in ranked_chunks:
+    if chunk['final_score'] &lt; 0.35: continue
+    if current_len + len(text) &lt; limit or not final_context_chunks:
+        final_context_chunks.append(chunk); current_len += len(text)
+    else:
+        break                      # ← 一旦某块放不下，后面所有块全部放弃</code></pre>
+<p>若第 3 个块较长导致超限，则第 4、5 个块（可能分数更高或被 <code>resolve_conflicts</code> 排到前面的 NEB 块）被无条件丢弃。正确做法是 <code>continue</code> 并优先保留高价值块。</p>
+
+<p><strong>E3｜"证据价值"未参与保留决策</strong> —— 语雀文档明确要求截断时优先保留：<strong>关键规则、条件限制、操作步骤、URL、安全边界</strong>。当前实现是纯粹的"分数降序 + 先到先得"，没有任何结构化信号的参与。</p>
+
+<p><strong>E4｜字符预算 ≠ token 预算</strong> —— 全部用字符数（1600 / 850 / 512），而模型的实际约束是 token（<code>n_ctx=2048</code>，<code>max_tokens=768</code>）。中英混排、公式、LaTeX 的字符-token 比差异很大，用字符数无法保证不超窗。</p>
+
+<h4>F. 排序 Rerank <span class="b b-p1">P1</span></h4>
+<ul>
+  <li><strong>F1｜没有真正的重排模型</strong> —— 没有 cross-encoder / reranker。<code>rank_results</code> 是<strong>特征线性加权</strong>（相似度 0.7 + 来源 0.3 + 年级条件 +0.1）。语雀文档强调 rerank 的作用是"把最有用的证据放到模型最容易看到的位置"，而线性加权只能做粗排。</li>
+  <li><strong>F2｜<code>resolve_conflicts</code> 名不副实</strong> —— <code>anti_confusion_engine.py:174-181</code> 实现只是把 <code>source_type == 'NEB'</code> 的块整体前移，是稳定划分，不是冲突消解。<strong>真正的知识冲突</strong>（同一概念不同教材版本表述不一致、旧版残留下线文档仍被召回）<strong>完全没有治理</strong>。这是语雀文档指出的"错答占比最高的环节（知识冲突 45.8%）"。</li>
+  <li><strong>F3｜年级加权是死分支</strong> —— <code>anti_confusion_engine.py:104-107</code> 要求 <code>str(metadata['grade']) in query_text</code>，而 grade 全为 <code>"unknown"</code>，用户提问也不会包含 "unknown" → 永不命中。</li>
+</ul>
+
+<h4>G. 可信生成与幻觉防控 <span class="b b-p2">P2</span></h4>
+
+<div class="callout warn">
+  <span class="ct">G1｜"防幻觉"第 4 层是死代码</span>
+  <p><code>anti_confusion_engine.py</code> 的类 docstring 声明了 5 层防御，其中 <code>Layer 4: Strict Grounding (Hallucination Prevention)</code> 对应 <code>validate_grounding()</code>（<code>:121-172</code>）。<strong>全仓库检索确认：<code>validate_grounding</code> 与 <code>filter_low_quality</code> 没有任何调用点。也就是说，声明的防幻觉机制从未生效。</strong></p>
+  <p>而且即便接上也是无效的：实现用 <code>re.findall(r'\b\w{5,}\b', answer_lower)</code> 提取"关键词"，依赖 <code>\b</code> 词边界 —— 中文没有空格词边界，这个正则在中文上会退化成把连续汉字整段匹配，overlap 比例计算失真；黑名单也全是英文短语。</p>
+</div>
+
+<p><strong>G2｜Prompt 约束是唯一实际生效的护栏</strong> —— <code>qwen_handler.py:30-40</code> 的 system prompt 要求"优先依据参考材料""若材料不足先说明未找到"。这是当前唯一的可信性保障，强度依赖 1.5B 模型的指令跟随能力。无引用标记（citation）、无 URL 校验、无输出后校验。</p>
+
+<p><strong>G3｜置信度恒为 0.3（中文分词缺陷）</strong></p>
+<ul>
+  <li><span class="lbl">证据：</span><code>rag_retrieval_engine.py:359-374</code>，流式路径在 <code>:315</code> 调用它：</li>
+</ul>
+<pre><code>if not answer or len(answer.split()) &lt; 5:
+    return 0.3</code></pre>
+<ul>
+  <li>中文答案无空格 → <code>answer.split()</code> 返回 1 个元素 → <code>&lt; 5</code> 成立 → <strong>恒定返回 0.3</strong>。</li>
+  <li><span class="lbl">对照：</span><code>qwen_handler.py:148-156</code> 已经实现了 CJK 感知的 <code>_units()</code>（每个汉字算一个单位），但<strong>流式路径没有复用它</strong>。</li>
+  <li><span class="lbl">影响：</span>GUI 展示的置信度是恒定值，完全没有信息量；也失去了"低置信 → 触发人工复核/拒答"的抓手。</li>
+</ul>
+
+<h4>H. 缓存与工程健壮性 <span class="b b-p2">P2</span></h4>
+<div class="tw">
+<table>
+<thead><tr><th>编号</th><th>问题</th><th>证据</th></tr></thead>
+<tbody>
+<tr><td>H1</td><td>语义缓存阈值调用点 0.88 与默认值 0.92 不一致，0.88 对 512 维小模型偏松，易串答案</td><td><code>rag_retrieval_engine.py:234</code> / <code>rag_cache.py:74</code></td></tr>
+<tr><td>H2</td><td>"LRU" 实为最旧写入淘汰，不更新访问时间</td><td><code>rag_cache.py:164-167</code></td></tr>
+<tr><td>H3</td><td>无 hit/miss 计数，<code>hit_rate</code> 硬编码返回 <code>"N/A"</code></td><td><code>rag_cache.py:192</code></td></tr>
+<tr><td>H4</td><td>错误答案也会被缓存 1 小时</td><td><code>rag_retrieval_engine.py:353-354</code></td></tr>
+<tr><td>H5</td><td><code>RAGCache</code> 无锁，而 GUI 在工作线程调用</td><td><code>rag_cache.py:36</code> / <code>main_window.py</code></td></tr>
+<tr><td>H6</td><td>索引重建后旧缓存不失效</td><td>无版本号/失效机制</td></tr>
+<tr><td>H7</td><td><code>rag_helper.py</code> 整模块不可用且无引用：<code>:93-95</code> 向 <code>query()</code> 传 <code>grade=</code>，而 <code>query()</code> 无此参数 → <code>TypeError</code></td><td><code>rag_retrieval_engine.py:160-168</code></td></tr>
+<tr><td>H8</td><td><code>ThreadPoolExecutor(max_workers=2)</code> 与最多 3 个集合不匹配</td><td><code>rag_retrieval_engine.py:273</code></td></tr>
+<tr><td>H9</td><td>摄取时 <code>process_file</code> 在 <code>try</code> 之外，单个坏文件中断整个目录摄取</td><td><code>ingest_content.py:399</code></td></tr>
+<tr><td>H10</td><td><code>system/rag/</code> 无 <code>__init__.py</code>，依赖 PEP 420 隐式命名空间包，与 <code>system/diagrams/</code> 不一致</td><td>目录实测</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>I. 评测能力 <span class="b b-p2">P2</span> / <span class="b b-p2">P3</span></h4>
+<ul>
+  <li><strong>无任何评测集、无评测脚本、无指标定义。</strong></li>
+  <li>唯一相关测试是 <code>tests/test_rag_retrieval_engine.py</code>（18 个用例），断言内容是"返回类型是 dict""包含 answer 字段""两次查询 keys 相同"—— <strong>只验证不崩溃，不验证召回质量</strong>。测试里还使用 <code>subject="Computer Science"</code> 这类会返回空集合的输入，本身就在掩盖 A2 问题。</li>
+  <li>后果：<strong>任何参数改动都无法判断是变好还是变坏。</strong>这是所有优化中最底层的阻塞项。</li>
+</ul>
+
+<h3 id="s2-3">2.3 错因归因（对照语雀方法论）</h3>
+<p>语雀文档给出的工业级 badcase 归因分布（知识冲突 45.8% / 检索问题 32.4% / Reranker 3.1% / LLM 18.7%）对本项目的启示：</p>
+<div class="tw">
+<table>
+<thead><tr><th>环节</th><th>业界占比</th><th>本项目预判主因</th></tr></thead>
+<tbody>
+<tr><td>知识工程 / 冲突</td><td>45.8%</td><td><strong>A1 覆盖断裂 + A5 噪声 + B1 中文硬切</strong> —— 本项目问题最集中处</td></tr>
+<tr><td>检索问题</td><td>32.4%</td><td><strong>D1 top-k=2 + D2 分数语义错 + D3 无关键词召回 + D4 阈值漂移</strong></td></tr>
+<tr><td>Reranker</td><td>3.1%</td><td>F1/F2，占比低，与业界一致，<strong>不应优先投入</strong></td></tr>
+<tr><td>LLM</td><td>18.7%</td><td>1.5B 模型能力上限 + G2 仅靠 Prompt + E1 证据被截断（实为检索侧问题）</td></tr>
+</tbody>
+</table>
+</div>
+<div class="callout">
+  <span class="ct">结论</span>
+  <p>优先修<strong>知识工程 + 检索 + 截断</strong>（合计影响约 80% 的错答），LLM 能力不是当前瓶颈。</p>
+</div>
+
+<!-- ================= 3 ================= -->
+<h2 id="s3">3. 优化策略与实施步骤</h2>
+
+<h3 id="s3-1">3.1 策略总览</h3>
+<div class="tw">
+<table>
+<thead><tr><th>阶段</th><th>主题</th><th>解决的问题</th><th>预期收益</th></tr></thead>
+<tbody>
+<tr><td>一</td><td><strong>止血：让链路正确</strong></td><td>A1/A2/A3/A4、B1、D1/D2、E1/E2、G3</td><td>从"基本检索不到"到"检索可用且不撒谎"</td></tr>
+<tr><td>二</td><td><strong>召回：混合检索 + 重排</strong></td><td>D3/D4/D6、F1/F2/F3、C1</td><td>召回率与排序质量显著提升</td></tr>
+<tr><td>三</td><td><strong>知识工程 + 可信生成</strong></td><td>A5、B2/B3、G1/G2</td><td>证据质量与答案可信度</td></tr>
+<tr><td>四</td><td><strong>评测闭环与飞轮</strong></td><td>I、C2</td><td>可度量、可持续、不退化</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="s3-2">3.2 阶段一（P0）：先让链路正确</h3>
+<p><em>原则：只做"修正错误"，不引入新依赖。本阶段所有改动都可独立验证。</em></p>
+<div class="phase">
+  <div class="ph">阶段一 <span class="b b-p0">P0</span> <span style="font-weight:400;color:var(--text-soft);font-size:13px;">预计 5–8 天</span></div>
+  <div class="pb">
+
+    <div class="step">
+      <h4><span class="no">1.1</span>重建索引，补齐 6 本教材</h4>
+      <p><span class="lbl act">动作</span></p>
+      <ol>
+        <li>修复 <code>ingest_content.py:421</code> 的 ID 生成，改为内容寻址：<code>f"{collection_name}:{hashlib.sha256(file_path.name.encode()).hexdigest()[:8]}:{i}"</code>；同时在 metadata 中加 <code>source_sha256</code>，为"内容未变则跳过"打基础。</li>
+        <li>收紧集合命名：把 <code>rag_retrieval_engine.py:112</code> 的 <code>low.startswith(neb_prefix)</code> 逻辑改为显式白名单校验，禁止 <code>neb_</code> 前缀兜底命中无关集合。</li>
+        <li>重建到<strong>新目录</strong> <code>mati_data/chroma_db_v2</code>（灰度，保留旧库可回滚）。</li>
+      </ol>
+      <p><span class="lbl file">目标文件</span> <code>scripts/ingest_content.py</code>、<code>scripts/rebuild_index.py</code></p>
+      <p><span class="lbl acc">验收</span> 6 个 PDF 全部产出块；<code>SELECT DISTINCT source</code> 返回 6 个文件名；各文件块的 ID 前缀唯一；总块数预期 <strong>600–900</strong>。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">1.2</span>修学科路由：配置驱动 + 真实存在校验</h4>
+      <p><span class="lbl act">动作</span></p>
+      <ol>
+        <li>删除写死 7 个不存在集合的 <code>subject_map</code>，改为读取配置（新增 <code>mati_data/config/retrieval.yaml</code>）。</li>
+        <li><code>_get_relevant_collections</code> 增加两层保护：候选集合必须是 <code>list_collections()</code> 的真实成员；命中的集合必须带 <code>subject</code> 标签匹配，而非仅靠集合名前缀。</li>
+        <li>新增 <code>grade</code> 参数贯通：<code>query(query_text, subject, grade=None, ...)</code>，并在 Chroma <code>query()</code> 中启用 <code>where={"grade": grade}</code>（当 grade 非空时）。</li>
+        <li>修正 GUI 学科键与配置键的对齐（<code>main_window.py:38-44</code>）。</li>
+      </ol>
+      <p><span class="lbl file">目标文件</span> <code>system/rag/rag_retrieval_engine.py</code>、新增 <code>mati_data/config/retrieval.yaml</code></p>
+      <p><span class="lbl acc">验收</span> 每个 GUI 学科选项实际选中的集合均非空；<code>grade="10"</code> 的查询能正确过滤。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">1.3</span>修相似度语义：显式使用余弦空间</h4>
+      <p><span class="lbl act">动作</span>（二选一，推荐前者）</p>
+      <ul>
+        <li><strong>方案 A（推荐）</strong>：集合创建时显式指定 <code>metadata={"hnsw:space": "cosine"}</code>，此时 Chroma 返回的 <code>distance = 1 − cos</code>，则 <code>score = 1 − distance</code> <strong>恰好等于余弦相似度</strong>，原代码无需改动，阈值语义自然正确。</li>
+        <li><strong>方案 B</strong>：保留 <code>l2</code>，把 <code>rag_retrieval_engine.py:266</code> 改为 <code>score = 1.0 - distance / 2.0</code>。</li>
+      </ul>
+      <div class="callout note"><p>换空间需要重建索引（HNSW 不支持原地改度量）。因此<strong>与步骤 1.1 的重建一并执行，零额外成本</strong>。</p></div>
+      <p><span class="lbl acc">验收</span> 用同一段文本作为 query 与 document，得分应 ≈ 1.0；用明显不相关文本，得分应 &lt; 0.5。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">1.4</span>解开 top-k 与候选池</h4>
+      <p><span class="lbl act">动作</span> <code>rag_retrieval_engine.py:257</code> 引入三级参数：<code>CANDIDATE_K=20</code>（候选池）、<code>RERANK_K=10</code>（精排池）、<code>EVIDENCE_K=4</code>（证据池）。阶段一先用 <code>n_results=CANDIDATE_K</code> 解开硬编码。</p>
+      <p><span class="lbl acc">验收</span> 日志中可见候选池 20 条、阈值过滤后 ≥ 8 条。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">1.5</span>统一上下文预算，消除二次截断</h4>
+      <p><span class="lbl act">动作</span></p>
+      <ol>
+        <li>引入<strong>唯一的 token 预算管理器</strong>（新增 <code>system/rag/context_budget.py</code>），字符-token 用轻量启发式估算（中文 ≈ 1 token/字，ASCII ≈ 0.3 token/字），无需引入 tokenizer 依赖。</li>
+        <li>删除 <code>qwen_handler.py:100-108</code> 的 850 字符截断，避免两处各自砍一刀。</li>
+        <li>预算计算：<code>n_ctx(2048) − system_prompt − history − max_tokens(768)</code>，留给证据约 700–900 token。</li>
+        <li>截断循环把 <code>break</code> 改为 <code>continue</code>（<code>rag_retrieval_engine.py:291</code>），改为按"单位 token 价值"降序贪心。</li>
+      </ol>
+      <p><span class="lbl acc">验收</span> 日志打印"检索上下文 token / 实际送入模型 token"二者应一致；构造"第 3 条超长、第 4/5 条高分"的用例，验证高分块被保留。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">1.6</span>修置信度（复用已有 CJK 分词）</h4>
+      <p><span class="lbl act">动作</span> 把 <code>rag_retrieval_engine.py:350-380</code> 的 <code>_calculate_confidence</code> 改为复用 <code>qwen_handler.py:148-156</code> 的 <code>_units()</code>（提取到公共工具模块，避免两处实现漂移）；把 <code>context_chunks</code> 的平均 <code>final_score</code> 纳入；把线性加和改为<strong>加权平均</strong>（当前相加可超 1.0 再 <code>min(1.0, ...)</code>，会饱和失真）。</p>
+      <p><span class="lbl acc">验收</span> 中文答案长度 20/80/200 字时置信度应不同且单调；<code>context_chunks</code> 为空时置信度应显著低于有支撑时。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">1.7</span>接通防幻觉校验（先接上，再改中文）</h4>
+      <p><span class="lbl act">动作</span> 在 <code>query()</code> 生成答案后、返回前调用 <code>anti_confusion.validate_grounding(answer, context_texts)</code>：若返回 <code>False</code> → 在答案前追加"以下回答未能在教材中找到充分依据，仅供参考"，并把 <code>confidence</code> 上限压到 0.4。同时修 <code>validate_grounding</code> 的中文实现：删除 <code>\b\w{5,}\b</code>，改用 §1.6 的 <code>_units()</code>；黑名单补中文短语。</p>
+      <p><span class="lbl acc">验收</span> 构造"库里没有的知识"提问应触发提示；构造有依据的提问不应误触发（误报率人工抽检 20 条）。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">1.8</span>统一归一化入口</h4>
+      <p><span class="lbl act">动作</span> 移除引擎内的第二次 <code>AdaptiveNormalizer</code>（<code>rag_retrieval_engine.py:205</code>），归一化统一在 GUI 层做一次。</p>
+      <p><span class="lbl acc">验收</span> 日志中"Normalization applied"每条问题只出现一次。</p>
+    </div>
+
+  </div>
+</div>
+<p><span class="lbl acc">阶段一完成标志</span> 6 本教材入库、每个学科都能选中集合、相似度语义正确、候选池 ≥ 20、证据不再被二次截断、置信度有区分度、防幻觉校验生效。</p>
+
+<h3 id="s3-3">3.3 阶段二（P1）：混合检索 + 融合重排</h3>
+<div class="phase">
+  <div class="ph">阶段二 <span class="b b-p1">P1</span> <span style="font-weight:400;color:var(--text-soft);font-size:13px;">预计 6–10 天</span></div>
+  <div class="pb">
+
+    <div class="step">
+      <h4><span class="no">2.1</span>中文感知的结构化切分<span class="b b-p0">最关键</span></h4>
+      <p><span class="lbl act">动作</span></p>
+      <ol>
+        <li>修 <code>find_sentence_boundaries</code>（<code>enhanced_chunker.py:162-182</code>）：
+<pre><code>boundaries = []
+for m in re.finditer(r'[。！？；!?;]\s*', text):   # 中文标点，无需空格
+    boundaries.append(m.end())
+for m in re.finditer(r'[.!?]\s+', text):          # 英文标点 + 空白
+    boundaries.append(m.end())
+for m in re.finditer(r'\n\s*\n+', text):          # 段落
+    boundaries.append(m.start())</code></pre>
+        （注意中文顿号 <code>、</code> 不切分，它是列举符而非句界。）</li>
+        <li><strong>标题层级切分</strong>：新增结构解析，优先在 Markdown 标题、<code>第X章</code>/<code>第X节</code>/<code>X.X</code> 编号、<code>例题</code>/<code>练习</code>/<code>思考与讨论</code> 等标记处切分。</li>
+        <li><strong>父子索引</strong>：父块 = 一个完整小节（800–1600 字符），子块 = 父块内的语义段（256–512 字符）。入库时<strong>子块携带 <code>parent_id</code></strong>，检索命中子块后<strong>取父块喂给 LLM</strong>。Chroma 里只存子块向量（保证召回精度），父块文本存单独集合或同集合以 <code>doc_type="parent"</code> 标记。</li>
+      </ol>
+      <p><span class="lbl acc">验收</span> 抽 20 个块人工检查，<strong>没有一句话被从中间切断</strong>；对"平抛运动的规律"这类问题，父块能一次给出完整小节。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">2.2</span>BM25 关键词召回 + 双路并行</h4>
+      <p><span class="lbl act">动作</span></p>
+      <ol>
+        <li>引入 <code>jieba</code>（中文分词）+ <code>rank_bm25</code>（纯 Python，零编译依赖，适合离线 CPU）。</li>
+        <li>双路并行检索（对照语雀文档的"定向检索 + 通用检索"）：<strong>定向路</strong> = 带 <code>subject</code>/<code>grade</code> 过滤的向量检索（精准，可能漏召回）；<strong>通用路</strong> = 不过滤的向量检索 + BM25 关键词检索（覆盖广，噪声多）。</li>
+        <li>两路结果用 <strong>RRF（Reciprocal Rank Fusion）</strong> 融合：<code>score(d) = Σ_routes 1 / (k + rank_route(d))</code>，k 取 60。RRF 只依赖排名不依赖分数尺度，<strong>天然规避了 D2 里"分数语义不一致"这类问题</strong>。</li>
+      </ol>
+      <p><span class="lbl acc">验收</span> 对 20 个术语型问题（如"万有引力常量"），BM25 路应能稳定召回包含该词的字面块；RRF 融合后 top-10 与纯向量 top-10 人工对比，相关性胜出率 ≥ 60%。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">2.3</span>特征加权重排（替代"来源权重占 30%"）</h4>
+      <p><span class="lbl act">动作</span> 重排分数改为<strong>可解释的特征加权</strong>，把来源权重压到 10% 以内：</p>
+<pre><code>final = w1 * cos_sim            (0.45)
+      + w2 * bm25_norm          (0.20)
+      + w3 * term_coverage      (0.15)   # 问题关键词在块中的覆盖率
+      + w4 * structure_bonus    (0.10)   # 是否命中标题/例题/定义标记
+      + w5 * source_priority    (0.05)   # NEB(1.0) &gt; 外部(0.6)
+      + w6 * recency/version    (0.05)   # 教材版本新者优先</code></pre>
+      <p>权重写入 <code>retrieval.yaml</code>，可调可回归。</p>
+      <p><span class="lbl act">可选</span> 接入 <code>bge-reranker-base</code> 做 cross-encoder 精排，<strong>但必须满足</strong>：仅对 top-10 生效、设置 800 ms 硬超时、超时自动降级为特征加权。默认关闭，通过配置开启。</p>
+      <p><span class="lbl acc">验收</span> 来源权重从 0.30 降到 0.05 后重跑评测集，NDCG@10 不应下降、Recall 应上升。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">2.4</span>Query 改写（规则优先，模型兜底）</h4>
+      <p><span class="lbl act">动作</span></p>
+      <ol>
+        <li><strong>术语同义词表</strong>（优先，零延迟）：从教材抽取学科术语，人工维护 50–100 组同义映射（"自由落体" ↔ "自由下落"、"圆周运动" ↔ "匀速圆周运动"）。改写时做扩展，多路并查。</li>
+        <li><strong>子问题拆解</strong>（规则触发）：检测到"和""以及""分别""区别"等连接词时，用本地 Qwen2.5-1.5B 生成 2–3 个子查询（严格 JSON 输出，<code>temperature=0.2</code>），并做缓存。</li>
+        <li><strong>反馈挖掘</strong>：把"检索零命中 / 最高分 &lt; 阈值"的问题写入 <code>retrieval_failures.jsonl</code>，复用已有的 <code>pattern_miner.py</code> 挖高频失败模式，反哺同义词表 —— <strong>这是本项目已有基础设施能直接复用的地方</strong>。</li>
+      </ol>
+      <p><span class="lbl acc">验收</span> 对"平抛运动和自由落体有什么区别"这类复合问题，改写后 Recall@10 应提升；改写额外延迟 P95 ≤ 1.5 s（含缓存）。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">2.5</span>HNSW 与检索参数调优</h4>
+      <p><span class="lbl act">动作</span> 库规模仍小（&lt; 2000 块），可将 <code>ef_search</code> 从 100 提到 200–400（召回提升、延迟几乎不变）；<code>max_neighbors</code> 从 16 提到 32 改善小库的图连通性。</p>
+      <p><span class="lbl acc">验收</span> 固定查询集，<code>ef_search ∈ {100, 200, 400}</code> 对比 Recall@20 与 P95 延迟，选拐点。</p>
+    </div>
+
+  </div>
+</div>
+
+<h3 id="s3-4">3.4 阶段三（P2）：知识治理与可信生成</h3>
+<div class="phase">
+  <div class="ph">阶段三 <span class="b b-p2">P2</span> <span style="font-weight:400;color:var(--text-soft);font-size:13px;">预计 5–8 天</span></div>
+  <div class="pb">
+
+    <div class="step">
+      <h4><span class="no">3.1</span>元数据 Schema 补全（见附录 A）</h4>
+      <p><span class="lbl act">动作</span> 入库时补齐结构化字段，最小集：<code>doc_id, source_file, source_sha256, chapter, section, page, content_type, grade, subject, textbook_version, chunk_index, parent_id, owner, status, effective_date, updated_at</code>。</p>
+      <p><span class="lbl act">关键动作</span> <strong>把 <code>content_type="toc"/"cover"</code> 的块在检索时默认排除</strong>（直接解决 A5 的噪声问题）。</p>
+      <p><span class="lbl acc">验收</span> 抽查 30 个块元数据完整率 ≥ 95%；"目录/封面"类块不再出现在任何检索结果中。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">3.2</span>内容清洗与去重</h4>
+      <p><span class="lbl act">动作</span> ① <strong>规则清洗</strong>：去除页码孤行、重复页眉页脚、ISBN/版权声明块、单独的图注编号；② <strong>哈希去重</strong>：<code>sha256(规范化文本)</code> 精确去重；③ <strong>语义去重</strong>：块间余弦 ≥ 0.92 视为重复，保留版次更新的那个。</p>
+      <p><span class="lbl acc">验收</span> 块总量下降 5–15%（去噪同时避免误删正文）；人工抽检 20 组"疑似重复对"，准确率 ≥ 80%。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">3.3</span>知识冲突治理</h4>
+      <p><span class="lbl act">动作</span> ① 引入 <code>textbook_version</code> + <code>effective_date</code>，同一 <code>(subject, chapter, concept_key)</code> 下多版本并存时按版本降序去重；② 建立"失效块下架"机制（<code>status="archived"</code> 的块在检索时过滤）；③ 冲突检测（轻量）：对同一 <code>concept_key</code> 的多个块，用关键词/数值一致性规则检测明显矛盾（如公式常量值不同），产出 <code>conflicts.jsonl</code> 供人工复核。</p>
+      <p><span class="lbl acc">验收</span> <code>conflicts.jsonl</code> 生成且可读；同概念多版本时只返回最新版。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">3.4</span>可信生成：引用标记 + 输出校验</h4>
+      <p><span class="lbl act">动作</span></p>
+      <ol>
+        <li><strong>Prompt 改造</strong>：要求模型在关键陈述后用 <code>[1]</code>/<code>[2]</code> 标注来源，并在答案末尾给出"依据：p.XX 第X节"（来源由检索层提供，不由模型编造）。</li>
+        <li><strong>引用校验（确定性规则）</strong>：解析答案中的 <code>[n]</code>，校验 <code>n</code> 是否落在实际提供的证据编号范围内；越界则移除该标记并降低置信度。</li>
+        <li><strong>忠实度校验</strong>：用 §1.7 修好的 <code>validate_grounding</code>（中文版）做输出后校验，失败则追加免责提示并压低置信度。</li>
+        <li><strong>拒答策略</strong>：当最高证据分低于阈值、或证据数与问题复杂度不匹配时，明确返回"教材中未找到相关内容"，<strong>而不是让 1.5B 自由发挥</strong>。这与 system prompt 已有的约束一致，只是把它变成确定性逻辑。</li>
+      </ol>
+      <p><span class="lbl acc">验收</span> 人工抽检 100 条回答，标注"引用是否真实存在于证据中"，引用准确率目标 ≥ 90%；构造 20 个"库中没有"的问题，正确拒答率 ≥ 80%。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">3.5</span>（按需）GraphRAG 预留</h4>
+      <p>语雀文档强调 GraphRAG 应"选择性建图，优先高频高价值知识"，而非全量。<strong>本项目建议阶段三不实施，仅预留接口</strong> —— 在元数据中加 <code>concept_key</code> 与 <code>prerequisites</code>，为将来构建"概念依赖图"留位。理由是当前库仅几百块，图的价值不足以抵消维护成本。</p>
+      <p><strong>触发条件</strong>：当评测集显示"多跳问题"（需要串联多个小节才能回答）的失败率 &gt; 20% 时再启动。</p>
+    </div>
+
+  </div>
+</div>
+
+<h3 id="s3-5">3.5 阶段四（P3）：评测闭环与反馈飞轮</h3>
+<div class="phase">
+  <div class="ph">阶段四 <span class="b b-p2">P3</span> <span style="font-weight:400;color:var(--text-soft);font-size:13px;">预计 4–6 天</span></div>
+  <div class="pb">
+
+    <div class="step">
+      <h4><span class="no">4.1</span>建评测集</h4>
+      <p><span class="lbl act">动作</span> 新增 <code>tests/eval/rag_eval_set.jsonl</code>，每行：</p>
+<pre><code>{"q": "什么是向心加速度？", "subject": "science", "grade": "10",
+ "gold_chunk_ids": ["neb_science:3f2a1b:42"],
+ "gold_answer": "...", "type": "concept|term|procedure|multi-hop"}</code></pre>
+      <p><strong>规模与构成</strong>：起步 30 题（每本教材 5 题），第一阶段目标 100–120 题；覆盖高频概念、术语型、步骤型、多跳型；<strong>必须包含 15–20 个"库中无答案"的负样本</strong>（用于测拒答）。</p>
+      <p><strong>标注方法</strong>：先由脚本用新链路召 top-20，人工从中勾选 gold chunk；比从零标注快数倍。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">4.2</span>分阶段评测（对照语雀的 10 阶段评测）</h4>
+      <p><span class="lbl act">动作</span> 新增 <code>scripts/eval_rag.py</code>，在链路的 6 个关键节点保存中间产物，支持"从任意阶段复跑"：</p>
+      <div class="tw">
+      <table>
+      <thead><tr><th>阶段</th><th>产物</th><th>单独可测的指标</th></tr></thead>
+      <tbody>
+      <tr><td>1 改写</td><td>改写后查询集</td><td>改写覆盖率</td></tr>
+      <tr><td>2 路由</td><td>选中集合</td><td>路由准确率</td></tr>
+      <tr><td>3 召回</td><td>候选池（含各路排名）</td><td><strong>Recall@k、MRR</strong></td></tr>
+      <tr><td>4 融合重排</td><td>精排池</td><td>NDCG@10</td></tr>
+      <tr><td>5 截断</td><td>最终上下文</td><td><strong>证据保留率</strong></td></tr>
+      <tr><td>6 生成</td><td>答案</td><td>忠实度、引用准确率、拒答正确率</td></tr>
+      </tbody>
+      </table>
+      </div>
+      <p><strong>关键收益</strong>：改一个参数只需从对应阶段复跑，<strong>评测周期从"重跑全链路"压缩到分钟级</strong>。</p>
+      <p><span class="lbl acc">验收</span> <code>python scripts/eval_rag.py --from-stage 3</code> 能独立跑通并输出指标表。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">4.3</span>线上反馈回流</h4>
+      <p><span class="lbl act">动作</span></p>
+      <ol>
+        <li>GUI 增加"这个回答有帮助吗"（点赞/点踩）按钮，写入 <code>feedback.jsonl</code>，字段含问题、答案、证据 ID 列表、置信度、点踩原因。</li>
+        <li>对点踩样本做<strong>轻量分诊</strong>（对照语雀的"分诊 Agent 只做粗分类"原则）：<code>知识缺失 / 回答有误 / 检索错 / 体验问题</code>，用规则 + 关键词即可。</li>
+        <li><strong>回归集自动增长</strong>：确认有误的样本自动追加到评测集，形成"线上错误 → 下次上线前回归"的闭环。</li>
+      </ol>
+      <p><span class="lbl acc">验收</span> <code>feedback.jsonl</code> 有数据；分诊准确率人工抽检 ≥ 70%；新增回归样本能在 <code>eval_rag.py</code> 中执行。</p>
+    </div>
+
+    <div class="step">
+      <h4><span class="no">4.4</span>缓存与工程健壮性修复</h4>
+      <p>修 H1–H6（阈值统一、真 LRU、hit/miss 计数、错误答案不入缓存、加锁、索引版本号使缓存失效）；删或修 <code>rag_helper.py</code>（H7）；<code>max_workers</code> 与集合数对齐（H8）；摄取循环加 <code>try</code>（H9）。</p>
+      <p><span class="lbl acc">验收</span> 缓存 <code>stats()</code> 能返回真实命中率；索引重建后旧答案不再命中。</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 4 ================= -->
+<h2 id="s4">4. 资源与技术要点</h2>
+
+<h3>4.1 技术选型</h3>
+<div class="tw">
+<table>
+<thead><tr><th>组件</th><th>现状</th><th>建议</th><th>理由</th></tr></thead>
+<tbody>
+<tr><td>向量库</td><td>ChromaDB（本地持久化）</td><td><strong>保留</strong></td><td>已集成，库规模小，无迁移必要</td></tr>
+<tr><td>向量度量</td><td><code>space=l2</code></td><td><strong>改为 <code>cosine</code></strong></td><td>让 <code>1-distance</code> 直接等于余弦，消除 D2</td></tr>
+<tr><td>嵌入模型</td><td><code>bge-small-zh-v1.5</code>（512 维，95 MB）</td><td><strong>保留</strong></td><td>中文优化、CPU 友好。若召回仍不足，再评估 <code>bge-base-zh-v1.5</code>（~400 MB，768 维），但需整库重嵌入</td></tr>
+<tr><td>生成模型</td><td>Qwen2.5-1.5B-Instruct GGUF（~1.04 GB）</td><td><strong>保留</strong></td><td><strong>当前瓶颈不在它</strong>，换大模型收益低于修检索</td></tr>
+<tr><td>关键词召回</td><td>无</td><td><strong><code>jieba</code> + <code>rank_bm25</code></strong></td><td>纯 Python、无编译、离线可用，完美契合约束</td></tr>
+<tr><td>融合策略</td><td>无</td><td><strong>RRF（k=60）</strong></td><td>只依赖排名，规避多路分数不可比</td></tr>
+<tr><td>重排</td><td>线性加权（来源占 30%）</td><td><strong>特征加权（来源 ≤ 5%）</strong>，cross-encoder 作为可选开关</td><td>CPU 延迟约束；先做零成本可解释重排</td></tr>
+<tr><td>可选精排</td><td>无</td><td><code>bge-reranker-base</code>（~1.1 GB），<strong>默认关闭</strong></td><td>延迟风险高，需实测后再决定</td></tr>
+<tr><td>评测</td><td>无</td><td><strong>自建 <code>eval_rag.py</code></strong>，可选 ragas / deepeval</td><td>deepeval 依赖较重，CPU 环境建议自建；LLM-as-judge 复用本地 Qwen</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>4.2 资源预算</h3>
+<div class="tw">
+<table>
+<thead><tr><th>资源项</th><th>现状</th><th>阶段一后</th><th>阶段三后</th></tr></thead>
+<tbody>
+<tr><td>向量库体积</td><td>8.7 MB / 231 块</td><td>~25–35 MB / 600–900 块</td><td>~30–40 MB（含父块与去重后）</td></tr>
+<tr><td>新增磁盘</td><td>—</td><td>忽略不计</td><td><code>bge-reranker-base</code> 1.1 GB（若启用）</td></tr>
+<tr><td>内存峰值</td><td>~1.1 GB + 嵌入模型</td><td>同</td><td>+0.3–1.2 GB（reranker 按需）</td></tr>
+<tr><td>嵌入耗时</td><td>—</td><td>600–900 块，batch=16，CPU ≈ <strong>15–30 分钟</strong></td><td>增量嵌入，分钟级</td></tr>
+<tr><td>单次检索延迟</td><td>~100–300 ms（2 条/集合）</td><td>~300–600 ms（20 条/集合 + BM25）</td><td>+0–800 ms（若启用精排）</td></tr>
+<tr><td>生成延迟</td><td>1.5B CPU ≈ 5–15 tok/s，768 max_tokens → <strong>30–90 s 上限</strong></td><td>同</td><td>同</td></tr>
+<tr><td>端到端 P95</td><td>待测</td><td><strong>目标 ≤ 15 s</strong></td><td>目标 ≤ 20 s（含精排）</td></tr>
+</tbody>
+</table>
+</div>
+<div class="callout note">
+  <span class="ct">延迟上的硬提醒</span>
+  <p><code>n_ctx=2048</code> 且 <code>max_tokens=768</code>，加上 system prompt 与历史，留给证据的预算很紧。<strong>"多召回"必须靠父子索引 + 预算管理，而不是硬塞</strong> —— 这是本方案反复强调的重点。</p>
+</div>
+
+<h3>4.3 关键技术要点与坑</h3>
+<ol>
+  <li><strong>改 <code>hnsw:space</code> 必须重建索引</strong>，HNSW 索引不支持原地改度量。所以步骤 1.1 与 1.3 必须合并执行。</li>
+  <li><strong>Chroma <code>upsert</code> 的 ID 语义</strong>：ID 是覆盖键，不是自增键。任何"集合名 + 序号"式的 ID 方案在目录批量摄取下都是 bug（见 A4）。</li>
+  <li><strong><code>get_or_create_collection</code> 不会更新已存在集合的 metadata</strong>：想改 <code>hnsw:space</code> 或 HNSW 参数，必须先删集合再建。</li>
+  <li><strong>中文正则的三重陷阱</strong>：<code>\b</code> 无词边界、<code>\s</code> 匹配不到标点后的零宽位置、<code>\w</code> 会把整段汉字当一个词。凡是面向中文的分词/断言/校验，都要用显式字符类（<code>[\u4e00-\u9fff]</code>）或 jieba。</li>
+  <li><strong>父子索引的召回-生成解耦</strong>：子块用于召回（精准），父块用于生成（完整）。不要用父块做召回，否则向量会被稀释、相似度下降。</li>
+  <li><strong>RRF 的 k 值</strong>：k=60 是经验值；k 越大越平缓。不要用"分数归一化后加权求和"，因为多路分数尺度不可比（本项目已经踩过这个坑）。</li>
+  <li><strong>token 预算要用实测校准</strong>：先用启发式（中文 1 字 ≈ 1 token）跑通，再用几组长文本对比估算误差，必要时才引入 tokenizer。</li>
+  <li><strong>LLM-as-judge 用本地 Qwen 时</strong>：<code>temperature=0.1</code>、要求严格 JSON 输出、并抽样人工校准一致性，否则评分本身不可信。</li>
+  <li><strong>离线模型加载</strong>：任何新增资源（jieba 词典、reranker、BM25 语料）都要走"本地缓存优先 + hf-mirror 兜底"的既有模式，避免破坏离线能力。</li>
+  <li><strong>别碰的两件事</strong>：① 不要为了提升召回而无限加大 chunk 数量（上下文预算有限，噪声会挤掉真信号）；② 不要在链路未修正前更换更大的生成模型（收益会被上游问题淹没）。</li>
+</ol>
+
+<h3>4.4 人力与分工</h3>
+<div class="tw">
+<table>
+<thead><tr><th>阶段</th><th>主要工作</th><th>可并行</th></tr></thead>
+<tbody>
+<tr><td>一</td><td>索引重建、路由、相似度、top-k、截断、置信度</td><td>与二/三的<strong>评测集标注</strong>并行</td></tr>
+<tr><td>二</td><td>中文切分、父子索引、混合检索、RRF、重排、改写</td><td>与一的验证并行</td></tr>
+<tr><td>三</td><td>元数据、清洗去重、冲突治理、引用校验</td><td>与二的调参并行</td></tr>
+<tr><td>四</td><td>评测脚本、分阶段复跑、反馈回流</td><td>贯穿全程</td></tr>
+</tbody>
+</table>
+</div>
+<div class="callout">
+  <p>唯一建议提前启动的事：<strong>评测集标注</strong>。它不依赖任何代码改动，却决定后面每一步能不能验证收益。</p>
+</div>
+
+<!-- ================= 5 ================= -->
+<h2 id="s5">5. 评估指标与预期效果</h2>
+
+<h3>5.1 分层指标体系</h3>
+<div class="tw">
+<table>
+<thead><tr><th>层</th><th>指标</th><th>定义</th><th>目标</th></tr></thead>
+<tbody>
+<tr><td rowspan="5"><strong>检索层</strong></td><td><strong>Recall@10</strong></td><td>top-10 中命中 gold chunk 的问题占比</td><td>≥ 0.85</td></tr>
+<tr><td>Recall@5</td><td>同上，k=5</td><td>≥ 0.75</td></tr>
+<tr><td>MRR@10</td><td>第一个 gold chunk 排名的倒数均值</td><td>≥ 0.65</td></tr>
+<tr><td>路由准确率</td><td>选中的集合包含 gold 所在集合的比例</td><td>≥ 0.95</td></tr>
+<tr><td>零召回率</td><td>返回空上下文的查询占比</td><td><strong>= 0</strong>（应有兜底）</td></tr>
+<tr><td rowspan="2"><strong>证据层</strong></td><td>证据保留率</td><td>送入模型的证据 token / 召回的总 token</td><td>≥ 0.70</td></tr>
+<tr><td>上下文命中率</td><td>至少有 1 条证据与 gold chunk 重合</td><td>≥ 0.90</td></tr>
+<tr><td rowspan="4"><strong>生成层</strong></td><td>忠实度</td><td>答案陈述能被证据支撑的比例（LLM-judge + 人工抽检）</td><td>≥ 0.85</td></tr>
+<tr><td>引用准确率</td><td>答案中 <code>[n]</code> 标记真实存在于证据中的比例</td><td>≥ 0.90</td></tr>
+<tr><td>拒答正确率</td><td>"库中无答案"负样本被正确拒答的比例</td><td>≥ 0.80</td></tr>
+<tr><td>误拒率</td><td>有答案却拒答的比例</td><td>≤ 0.10</td></tr>
+<tr><td rowspan="3"><strong>系统层</strong></td><td>端到端 P95 延迟</td><td>提问到首 token / 完整答案</td><td>首 token ≤ 5 s</td></tr>
+<tr><td>置信度区分度</td><td>正确组与错误组的置信度均值差</td><td>≥ 0.15（当前恒 0，<strong>必测得</strong>）</td></tr>
+<tr><td>缓存命中率</td><td>真实命中率（需先修 H3）</td><td>观测项</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>5.2 评测集构建方案</h3>
+<div class="tw">
+<table>
+<thead><tr><th>项</th><th>建议</th></tr></thead>
+<tbody>
+<tr><td>规模</td><td>起步 30 题 → 第一阶段 100–120 题</td></tr>
+<tr><td>构成</td><td>概念型 40%、术语型 25%、步骤/例题型 20%、多跳型 15%</td></tr>
+<tr><td>负样本</td><td>15–20 题"教材中确实没有"的问题</td></tr>
+<tr><td>标注方式</td><td>脚本先跑 top-20 候选，人工勾选 gold chunk（比从零标注快 3–5 倍）</td></tr>
+<tr><td>覆盖</td><td>6 本教材各 15–20 题，确保每本教材都被评测</td></tr>
+<tr><td>维护</td><td>回归集随线上反馈自动增长（§4.3）</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>5.3 基线与目标</h3>
+<div class="callout note">
+  <span class="ct">诚实说明</span>
+  <p>项目当前<strong>没有任何评测基线</strong>，因此下表的"基线"列标注为"待测"，不得编造。阶段一的第一个交付物之一就是<strong>建立基线</strong> —— 只有先量出现状，才能证明后续改进有效。</p>
+</div>
+<div class="tw">
+<table>
+<thead><tr><th>指标</th><th>基线（待测）</th><th>阶段一目标</th><th>阶段二目标</th><th>阶段三目标</th></tr></thead>
+<tbody>
+<tr><td>索引覆盖教材数</td><td><strong>2 / 6</strong>（实测）</td><td>6 / 6</td><td>6 / 6</td><td>6 / 6</td></tr>
+<tr><td>索引块数</td><td><strong>231</strong>（实测）</td><td>600–900（清洗后）</td><td>同</td><td>500–800（去重后）</td></tr>
+<tr><td>学科路由成功率</td><td>1/6 学科可用（实测）</td><td>6/6</td><td>6/6</td><td>6/6</td></tr>
+<tr><td>Recall@10</td><td>待测（预计 &lt; 0.4）</td><td>≥ 0.60</td><td><strong>≥ 0.85</strong></td><td>≥ 0.88</td></tr>
+<tr><td>证据保留率</td><td><strong>&lt; 0.55</strong>（1600→850 推算）</td><td>≥ 0.70</td><td>≥ 0.75</td><td>≥ 0.80</td></tr>
+<tr><td>零召回率</td><td>待测</td><td>≤ 0.05</td><td>≤ 0.02</td><td>0</td></tr>
+<tr><td>引用准确率</td><td><strong>0</strong>（功能不存在）</td><td>—</td><td>—</td><td>≥ 0.90</td></tr>
+<tr><td>拒答正确率</td><td><strong>0</strong>（无机制）</td><td>≥ 0.50</td><td>≥ 0.60</td><td>≥ 0.80</td></tr>
+<tr><td>置信度区分度</td><td><strong>0</strong>（恒 0.3，实测）</td><td>≥ 0.10</td><td>≥ 0.15</td><td>≥ 0.15</td></tr>
+<tr><td>单次检索延迟 P95</td><td>待测</td><td>≤ 800 ms</td><td>≤ 1.5 s</td><td>≤ 1.5 s</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>5.4 分阶段预期效果</h3>
+<p><strong>阶段一后</strong>（最快可见）</p>
+<ul>
+  <li>6 本教材全部可检索，<strong>"问其他 4 本书完全没反应"的问题消失</strong>。</li>
+  <li>数学/英语/计算机问题不再零上下文。</li>
+  <li>证据不再被静默丢弃一半，答案有据可依的比例显著上升。</li>
+  <li>置信度从"恒定 0.3"变成有区分度的数值，<strong>首次具备"低置信预警"能力</strong>。</li>
+  <li>预期：评测集上的回复可用率（人工判定"答对了且没编造"）<strong>从不可测提升到 60–70%</strong>。</li>
+</ul>
+<p><strong>阶段二后</strong></p>
+<ul>
+  <li>术语型问题（"万有引力常量"）命中率明显改善（BM25 的贡献）。</li>
+  <li>切分不再破坏句子，需要连续上下文的问题（"平抛运动的规律"）能一次给出完整小节。</li>
+  <li>阈值不再随来源漂移，噪声块入选率下降。</li>
+  <li>预期：<strong>Recall@10 达 0.85 量级，回复可用率 75–85%</strong>。</li>
+</ul>
+<p><strong>阶段三后</strong></p>
+<ul>
+  <li>答案可溯源（引用标记 + 章节页码）。</li>
+  <li>库中无答案时能正确说"教材中未找到"，而非编造。</li>
+  <li>目录/封面类噪声块不再污染结果。</li>
+  <li>预期：<strong>回复可用率 ≥ 85%，引用准确率 ≥ 0.90，幻觉率 ≤ 5%</strong>。</li>
+</ul>
+<p><strong>阶段四后</strong></p>
+<ul>
+  <li>每次参数改动都能在分钟级拿到指标对比，<strong>优化从"感觉变好了"变成"数据证明变好了"</strong>。</li>
+  <li>线上点踩自动进入回归集，质量不倒退。</li>
+</ul>
+
+<!-- ================= 6 ================= -->
+<h2 id="s6">6. 风险与回滚</h2>
+<div class="tw">
+<table>
+<thead><tr><th>风险</th><th>可能性</th><th>影响</th><th>应对</th></tr></thead>
+<tbody>
+<tr><td>重建索引期间服务不可用</td><td>高</td><td>中</td><td>重建到 <code>chroma_db_v2</code>，配置切换，旧库保留可秒回滚</td></tr>
+<tr><td><code>hnsw:space</code> 改 cosine 后阈值需重标定</td><td>高</td><td>中</td><td>阈值全部移入 <code>retrieval.yaml</code>，用评测集反推而非拍脑袋</td></tr>
+<tr><td>启用 cross-encoder 后延迟超预算</td><td>中</td><td>高</td><td><strong>默认关闭</strong>；开启时设 800 ms 硬超时 + 自动降级为特征加权</td></tr>
+<tr><td>评测集标注工作量被低估</td><td>高</td><td>中</td><td>先做 30 题小集；用"脚本召回 + 人工勾选"降低单题成本</td></tr>
+<tr><td>中文切分改动引入新边界 bug</td><td>中</td><td>中</td><td>保留切分前后对照工具，抽检 20 块验证无断句</td></tr>
+<tr><td>语义去重误删有效内容</td><td>中</td><td>中</td><td>阈值从 0.95 起步逐步下调；去重结果先落盘人工确认再入库</td></tr>
+<tr><td>引入 jieba/rank_bm25 破坏离线能力</td><td>低</td><td>中</td><td>二者均为纯本地包，无网络依赖；词典随包分发</td></tr>
+<tr><td>上下文预算管理误算导致超窗</td><td>中</td><td>中</td><td>加运行期断言：组装后的 token 估算不得超过预算，超了则丢最低分块</td></tr>
+<tr><td>1.5B 模型指令跟随不足，引用标记不可靠</td><td>中</td><td>中</td><td><strong>引用由检索层生成、模型只做编号引用</strong>；再加确定性校验兜底</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout">
+  <span class="ct">关于"证据约束强化学习"的取舍说明</span>
+  <p>语雀文档中的 GRPO + 多奖励（Evidence Faithfulness / Style / Safety / URL Validity）需要训练资源。本地 1.5B + CPU 环境<strong>不具备训练条件</strong>，本方案以三条替代路径达成同等目标：</p>
+  <ol>
+    <li><strong>确定性规则兜底</strong>（引用校验、URL 校验、拒答策略）—— 比训练更可靠，且可解释；</li>
+    <li><strong>Prompt 硬约束</strong>（system prompt 已有基础，继续强化）；</li>
+    <li><strong>输出后校验 + 置信度联动</strong>。</li>
+  </ol>
+  <p>若将来有 GPU 资源，可直接在阶段四的评测集上做 LoRA 微调（Query 改写或答案忠实度），评测框架已就位。</p>
+</div>
+
+<!-- ================= 附录 A ================= -->
+<h2 id="sa">附录 A. 元数据 Schema（适配 Mati 版本）</h2>
+<p>在 <code>kb-build-kit</code> 通用模板基础上裁剪，字段名保持英文。</p>
+<div class="tw">
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><code>doc_id</code></td><td>string</td><td>是</td><td>全局唯一，建议 <code>{source_sha256[:8]}:{chunk_index}</code></td></tr>
+<tr><td><code>chunk_id</code></td><td>string</td><td>是</td><td>Chroma 主键，<strong>必须全局唯一</strong>（修 A4）</td></tr>
+<tr><td><code>parent_id</code></td><td>string</td><td>否</td><td>父块 ID（父子索引）</td></tr>
+<tr><td><code>doc_type</code></td><td>enum</td><td>是</td><td><code>child</code> / <code>parent</code></td></tr>
+<tr><td><code>source_file</code></td><td>string</td><td>是</td><td>原始文件名</td></tr>
+<tr><td><code>source_sha256</code></td><td>string</td><td>是</td><td>文件内容哈希，用于增量与去重</td></tr>
+<tr><td><code>subject</code></td><td>string</td><td>是</td><td>学科（英文键，与配置对齐）</td></tr>
+<tr><td><code>grade</code></td><td>string</td><td>否</td><td>年级，<code>unknown</code> 应尽量避免</td></tr>
+<tr><td><code>textbook_version</code></td><td>string</td><td>否</td><td>教材版本/年份，用于冲突治理</td></tr>
+<tr><td><code>chapter</code></td><td>string</td><td>否</td><td>章节名</td></tr>
+<tr><td><code>section</code></td><td>string</td><td>否</td><td>小节名</td></tr>
+<tr><td><code>page</code></td><td>int</td><td>否</td><td>起始页码，用于溯源展示</td></tr>
+<tr><td><code>content_type</code></td><td>enum</td><td>是</td><td><code>body</code> / <code>example</code> / <code>exercise</code> / <code>definition</code> / <code>figure_caption</code> / <code>toc</code> / <code>cover</code></td></tr>
+<tr><td><code>chunk_index</code></td><td>int</td><td>是</td><td>块序号</td></tr>
+<tr><td><code>token_estimate</code></td><td>int</td><td>否</td><td>估算 token 数，供预算管理直接使用</td></tr>
+<tr><td><code>concept_key</code></td><td>string</td><td>否</td><td>概念标识（GraphRAG 预留）</td></tr>
+<tr><td><code>prerequisites</code></td><td>string[]</td><td>否</td><td>先修概念（GraphRAG 预留）</td></tr>
+<tr><td><code>owner</code></td><td>string</td><td>否</td><td>内容责任方</td></tr>
+<tr><td><code>status</code></td><td>enum</td><td>是</td><td><code>published</code> / <code>archived</code></td></tr>
+<tr><td><code>effective_date</code></td><td>date</td><td>否</td><td>生效日期</td></tr>
+<tr><td><code>updated_at</code></td><td>datetime</td><td>是</td><td>最后更新时间</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>检索侧默认过滤条件</strong></p>
+<pre><code>status != "archived"
+AND content_type NOT IN ("toc", "cover")
+AND doc_type != "parent"        # 父块不参与召回，只在命中子块后取出</code></pre>
+
+<!-- ================= 附录 B ================= -->
+<h2 id="sb">附录 B. 问题—证据速查</h2>
+<div class="tw">
+<table>
+<thead><tr><th>编号</th><th>问题</th><th>证据位置</th></tr></thead>
+<tbody>
+<tr><td>A1</td><td>6 本教材仅入库 2 本</td><td><code>chroma.sqlite3</code> 实测：226 + 5 块；<code>textbooks/</code> 有 6 个 PDF</td></tr>
+<tr><td>A2</td><td>学科路由指向不存在集合</td><td><code>rag_retrieval_engine.py:119-135</code>；DB 仅 <code>neb_science</code>/<code>neb_readme</code></td></tr>
+<tr><td>A3</td><td>年级维度失效</td><td><code>rag_retrieval_engine.py:160-168</code>（无 grade 参数）、<code>:244</code>；<code>ingest_content.py:337-349</code></td></tr>
+<tr><td>A4</td><td>跨文件 ID 覆盖（潜在）</td><td><code>ingest_content.py:421</code> + <code>:433</code>（upsert）</td></tr>
+<tr><td>A5</td><td>入库含目录/封面噪声</td><td><code>chroma.sqlite3</code> 中 <code>chroma:document</code> 含目录页文本</td></tr>
+<tr><td>B1</td><td>中文句子边界正则失效</td><td><code>enhanced_chunker.py:175</code>（<code>[.!?]\s+</code>）</td></tr>
+<tr><td>B2</td><td>无结构感知切分</td><td><code>ingest_content.py:410</code> 直接调 <code>smart_chunk_with_overlap</code></td></tr>
+<tr><td>C1</td><td>无 query 改写</td><td><code>system/input_processing/</code> 仅有纠错类能力</td></tr>
+<tr><td>C2</td><td>双次归一化</td><td><code>main_window.py</code> + <code>rag_retrieval_engine.py:205</code></td></tr>
+<tr><td>D1</td><td>top-k 硬压到 2</td><td><code>rag_retrieval_engine.py:257</code></td></tr>
+<tr><td>D2</td><td><code>1 - L2</code> 冒充余弦</td><td><code>rag_retrieval_engine.py:266</code>；schema <code>space=l2</code>；缓存侧正确实现对照 <code>rag_cache.py:124</code></td></tr>
+<tr><td>D3</td><td>无 BM25/混合检索</td><td>全仓库无相关依赖与实现</td></tr>
+<tr><td>D4</td><td>来源权重 30% 污染阈值</td><td><code>anti_confusion_engine.py:102</code> + <code>rag_retrieval_engine.py:284</code></td></tr>
+<tr><td>E1</td><td>二次截断 850 字符</td><td><code>qwen_handler.py:100-108</code> vs <code>rag_retrieval_engine.py:281</code></td></tr>
+<tr><td>E2</td><td><code>break</code> 丢弃高分块</td><td><code>rag_retrieval_engine.py:291</code></td></tr>
+<tr><td>F1</td><td>无 rerank 模型</td><td><code>anti_confusion_engine.py:63-119</code> 为线性加权</td></tr>
+<tr><td>F2</td><td>伪冲突消解</td><td><code>anti_confusion_engine.py:174-181</code></td></tr>
+<tr><td>F3</td><td>年级加权死分支</td><td><code>anti_confusion_engine.py:104-107</code></td></tr>
+<tr><td>G1</td><td>防幻觉校验从未被调用</td><td><code>anti_confusion_engine.py:121-172</code>，全仓库无调用点</td></tr>
+<tr><td>G3</td><td>置信度恒 0.3</td><td><code>rag_retrieval_engine.py:359-374</code></td></tr>
+<tr><td>H7</td><td><code>rag_helper</code> 传参错误</td><td><code>rag_helper.py:93-95</code> vs <code>rag_retrieval_engine.py:160-168</code></td></tr>
+<tr><td>I</td><td>无评测集</td><td><code>tests/test_rag_retrieval_engine.py</code> 仅 18 个结构断言</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ================= 附录 C ================= -->
+<h2 id="sc">附录 C. 参考来源</h2>
+<ol>
+  <li><strong>《工业级的 RAG 优化选型》</strong> —— 语雀 sealearn 组织 wiki（用户提供）。本文引用其七层框架：知识工程 / Query 改写 / 检索召回 / Rerank 与截断 / 可信生成 / 过程评测 / 反馈闭环；并引用其 badcase 归因分布（知识冲突 45.8%、检索 32.4%、Reranker 3.1%、LLM 18.7%）与"10 阶段评测"思想。</li>
+  <li><code>docs/调研笔记-RAG检索层与AI推理层.md</code> —— 本仓库既有代码取证笔记。</li>
+  <li><code>mati_data/chroma_db/chroma.sqlite3</code> —— 本文所有索引规模、ID 区间、schema 数据的实测来源。</li>
+  <li>知识库搭建方法论（<code>kb-build-kit/references/methodology.md</code>）—— 切分、混合检索、元数据过滤、召回评估的通用原则。</li>
+  <li>DeepEval —— https://github.com/confident-ai/deepeval （语雀文档推荐；本方案因 CPU 环境依赖较重，建议自建评测脚本，可选集成）。</li>
+</ol>
+
+<div class="foot">
+  Mati RAG 优化方案 v1.0 · 2026-10-01 · 由知识库搭建专家「知库」基于语雀《工业级的 RAG 优化选型》方法论与本项目代码/索引实测诊断生成
+</div>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var map = {};
+  links.forEach(function(a){
+    var id = a.getAttribute('href').slice(1);
+    var el = document.getElementById(id);
+    if(el) map[id] = a;
+  });
+  var targets = Object.keys(map).map(function(id){
+    return {id:id, el:document.getElementById(id), a:map[id]};
+  });
+  function onScroll(){
+    var y = window.scrollY + 130, cur = targets[0];
+    for(var i=0;i<targets.length;i++){
+      if(targets[i].el.offsetTop <= y) cur = targets[i]; else break;
+    }
+    links.forEach(function(a){ a.classList.remove('active'); });
+    if(cur) cur.a.classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+</script>
+</body>
+</html>

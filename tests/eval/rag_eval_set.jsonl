@@ -1,0 +1,78 @@
+{"id": "p01", "q": "匀变速直线运动的位移与时间的关系式是什么？", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": ["physics_required_1"], "type": "concept"}
+{"id": "p02", "q": "牛顿第三定律的内容是什么？", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": ["physics_required_1"], "type": "concept"}
+{"id": "p03", "q": "什么是向心力？它由什么力提供？", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": ["physics_required_2"], "type": "concept"}
+{"id": "p04", "q": "平抛运动的规律是什么？", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": ["physics_required_2"], "type": "concept"}
+{"id": "p05", "q": "静电场中场强的定义式是什么？", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": ["physics_required_3"], "type": "term"}
+{"id": "p06", "q": "闭合电路欧姆定律的表达式是什么？", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": ["physics_required_3"], "type": "term"}
+{"id": "p07", "q": "动量守恒定律的适用条件是什么？", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": ["physics_elective_1"], "type": "procedure"}
+{"id": "p08", "q": "简谐运动的回复力有什么特点？", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": ["physics_elective_1"], "type": "concept"}
+{"id": "p09", "q": "法拉第电磁感应定律的内容是什么？", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": ["physics_elective_2"], "type": "concept"}
+{"id": "p10", "q": "安培力的方向如何判断？", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": ["physics_elective_2"], "type": "procedure"}
+{"id": "p11", "q": "光电效应中遏止电压与入射光频率有什么关系？", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": ["physics_elective_3"], "type": "concept"}
+{"id": "p12", "q": "原子核的衰变有哪几种类型？", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": ["physics_elective_3"], "type": "concept"}
+{"id": "c01", "q": "物质的量浓度的计算公式是什么？", "subject": "science", "discipline": "chemistry", "grade": "10", "gold_books": ["chemistry_required_1"], "type": "term"}
+{"id": "c02", "q": "氧化还原反应的本质是什么？", "subject": "science", "discipline": "chemistry", "grade": "10", "gold_books": ["chemistry_required_1"], "type": "concept"}
+{"id": "c03", "q": "甲烷的取代反应有什么特点？", "subject": "science", "discipline": "chemistry", "grade": "10", "gold_books": ["chemistry_required_2"], "type": "concept"}
+{"id": "c04", "q": "元素周期律的主要表现有哪些？", "subject": "science", "discipline": "chemistry", "grade": "10", "gold_books": ["chemistry_required_1"], "type": "concept"}
+{"id": "c05", "q": "影响化学反应速率的因素有哪些？", "subject": "science", "discipline": "chemistry", "grade": "11", "gold_books": ["chemistry_elective_1"], "type": "procedure"}
+{"id": "c06", "q": "勒夏特列原理的内容是什么？", "subject": "science", "discipline": "chemistry", "grade": "11", "gold_books": ["chemistry_elective_1"], "type": "concept"}
+{"id": "c07", "q": "什么是电负性？它在周期表中如何变化？", "subject": "science", "discipline": "chemistry", "grade": "11", "gold_books": ["chemistry_elective_2"], "type": "term"}
+{"id": "c08", "q": "离子键和共价键有什么区别？", "subject": "science", "discipline": "chemistry", "grade": "11", "gold_books": ["chemistry_elective_2"], "type": "concept"}
+{"id": "c09", "q": "乙醇的化学性质有哪些？", "subject": "science", "discipline": "chemistry", "grade": "11", "gold_books": ["chemistry_elective_3"], "type": "concept"}
+{"id": "c10", "q": "苯的结构有什么特点？", "subject": "science", "discipline": "chemistry", "grade": "11", "gold_books": ["chemistry_elective_3"], "type": "concept"}
+{"id": "m01", "q": "判断函数奇偶性的方法是什么？", "subject": "math", "discipline": "mathematics", "grade": "10", "gold_books": ["math_required_1"], "type": "procedure"}
+{"id": "m02", "q": "指数函数的图像和性质是什么？", "subject": "math", "discipline": "mathematics", "grade": "10", "gold_books": ["math_required_1"], "type": "concept"}
+{"id": "m03", "q": "正弦定理的内容是什么？", "subject": "math", "discipline": "mathematics", "grade": "10", "gold_books": ["math_required_2"], "type": "term"}
+{"id": "m04", "q": "复数的模怎么计算？", "subject": "math", "discipline": "mathematics", "grade": "10", "gold_books": ["math_required_2"], "type": "term"}
+{"id": "m05", "q": "等差数列的通项公式是什么？", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": ["math_elective_2"], "type": "term"}
+{"id": "m06", "q": "椭圆的标准方程是什么？", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": ["math_elective_1"], "type": "term"}
+{"id": "m07", "q": "导数的几何意义是什么？", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": ["math_elective_2"], "type": "concept"}
+{"id": "m08", "q": "排列与组合有什么区别？", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": ["math_elective_3"], "type": "concept"}
+{"id": "m09", "q": "离散型随机变量的数学期望怎么计算？", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": ["math_elective_3"], "type": "term"}
+{"id": "m10", "q": "正态分布曲线的特点是什么？", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": ["math_elective_3"], "type": "concept"}
+{"id": "z01", "q": "《乡土中国》的核心观点是什么？", "subject": "chinese", "discipline": "chinese", "grade": "10", "gold_books": ["chinese_required_1"], "type": "concept"}
+{"id": "z02", "q": "《劝学》的中心论点是什么？", "subject": "chinese", "discipline": "chinese", "grade": "10", "gold_books": ["chinese_required_1"], "type": "concept"}
+{"id": "z03", "q": "《红楼梦》的主要人物关系是怎样的？", "subject": "chinese", "discipline": "chinese", "grade": "10", "gold_books": ["chinese_required_2"], "type": "concept"}
+{"id": "z04", "q": "《雷雨》的主要矛盾冲突是什么？", "subject": "chinese", "discipline": "chinese", "grade": "10", "gold_books": ["chinese_required_2"], "type": "concept"}
+{"id": "z05", "q": "《论语》十二章中关于学习的观点有哪些？", "subject": "chinese", "discipline": "chinese", "grade": "11", "gold_books": ["chinese_elective_1"], "type": "concept"}
+{"id": "z06", "q": "《过秦论》的中心论点是什么？", "subject": "chinese", "discipline": "chinese", "grade": "11", "gold_books": ["chinese_elective_2"], "type": "concept"}
+{"id": "z07", "q": "《阿Q正传》的主题思想是什么？", "subject": "chinese", "discipline": "chinese", "grade": "11", "gold_books": ["chinese_elective_3"], "type": "concept"}
+{"id": "z08", "q": "《边城》表现了怎样的人情美？", "subject": "chinese", "discipline": "chinese", "grade": "11", "gold_books": ["chinese_elective_3"], "type": "concept"}
+{"id": "t01", "q": "什么是算法？算法有哪些基本特征？", "subject": "computer_science", "discipline": "information_technology", "grade": "10", "gold_books": ["it_required_1"], "type": "concept"}
+{"id": "t02", "q": "在 Python 中如何用循环实现累加求和？", "subject": "computer_science", "discipline": "information_technology", "grade": "10", "gold_books": ["it_required_1"], "type": "procedure"}
+{"id": "t03", "q": "信息系统由哪些要素组成？", "subject": "computer_science", "discipline": "information_technology", "grade": "10", "gold_books": ["it_required_2"], "type": "concept"}
+{"id": "t04", "q": "什么是计算机网络协议？", "subject": "computer_science", "discipline": "information_technology", "grade": "10", "gold_books": ["it_required_2"], "type": "term"}
+{"id": "t05", "q": "栈和队列有什么区别？", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_1"], "type": "concept"}
+{"id": "t06", "q": "二叉树的遍历方式有哪几种？", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_1"], "type": "concept"}
+{"id": "t07", "q": "IP 地址和域名之间是什么关系？", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_2"], "type": "concept"}
+{"id": "t08", "q": "计算机网络的拓扑结构有哪几种？", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_2"], "type": "term"}
+{"id": "t09", "q": "数据库中的主键有什么作用？", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_3"], "type": "term"}
+{"id": "t10", "q": "SQL 中如何查询数据？", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_3"], "type": "procedure"}
+{"id": "t11", "q": "什么是人工智能？人工智能有哪些典型应用？", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_4"], "type": "concept"}
+{"id": "t12", "q": "机器学习主要有哪几种类型？", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_4"], "type": "concept"}
+{"id": "n01", "q": "量子色动力学中的渐近自由现象是什么？", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n02", "q": "如何用傅里叶变换分析股票价格时间序列？", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n03", "q": "商鞅变法中废井田开阡陌的具体法令条文有哪些？", "subject": "social_studies", "discipline": "", "grade": "10", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n04", "q": "请说明黎曼猜想的证明思路。", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n05", "q": "CRISPR-Cas9 基因编辑的脱靶效应机制是什么？", "subject": "science", "discipline": "biology", "grade": "11", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n06", "q": "罗马法中的万民法包含哪些具体条款？", "subject": "social_studies", "discipline": "", "grade": "10", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n07", "q": "紫杉醇的全合成路线有哪些关键步骤？", "subject": "science", "discipline": "chemistry", "grade": "11", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n08", "q": "宋代交子的发行制度是怎样的？", "subject": "social_studies", "discipline": "", "grade": "10", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n09", "q": "标准模型中希格斯玻色子是如何获得质量的？", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n10", "q": "请推导薛定谔方程并解释波函数坍缩。", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n11", "q": "《尤利西斯》中意识流手法的具体表现有哪些？", "subject": "chinese", "discipline": "chinese", "grade": "11", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "n12", "q": "请解释哥德尔不完备性定理的证明过程。", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": [], "type": "negative", "expect_refuse": true}
+{"id": "k01", "q": "自由下落是啥？有啥规律吗", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": ["physics_required_1"], "type": "concept", "register": "colloquial"}
+{"id": "k02", "q": "咋判断一个函数是奇函数还是偶函数", "subject": "math", "discipline": "mathematics", "grade": "10", "gold_books": ["math_required_1"], "type": "procedure", "register": "colloquial"}
+{"id": "k03", "q": "摩尔浓度怎么算来着", "subject": "science", "discipline": "chemistry", "grade": "10", "gold_books": ["chemistry_required_1"], "type": "term", "register": "colloquial"}
+{"id": "k04", "q": "堆栈和队列有啥不一样", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_1"], "type": "concept", "register": "colloquial"}
+{"id": "k05", "q": "电脑之间怎么互相找到对方的", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_2"], "type": "concept", "register": "colloquial"}
+{"id": "k06", "q": "文言文里劝人学习的那篇文章讲了啥", "subject": "chinese", "discipline": "chinese", "grade": "10", "gold_books": ["chinese_required_1"], "type": "concept", "register": "colloquial"}
+{"id": "k07", "q": "期望值是啥意思，怎么求", "subject": "math", "discipline": "mathematics", "grade": "11", "gold_books": ["math_elective_3"], "type": "term", "register": "colloquial"}
+{"id": "k08", "q": "AI 是怎么学会认图片的", "subject": "computer_science", "discipline": "information_technology", "grade": "11", "gold_books": ["it_elective_4"], "type": "concept", "register": "colloquial"}
+{"id": "k09", "q": "引力常数大概是多大来着", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": ["physics_required_2"], "type": "term", "register": "colloquial"}
+{"id": "k10", "q": "化学反应快慢跟啥有关系", "subject": "science", "discipline": "chemistry", "grade": "11", "gold_books": ["chemistry_elective_1"], "type": "procedure", "register": "colloquial"}
+{"id": "x01", "q": "静电场中场强的定义式是什么？", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": ["physics_required_3"], "type": "term", "cross_grade": true}
+{"id": "x02", "q": "向心加速度的计算公式是什么？", "subject": "science", "discipline": "physics", "grade": "11", "gold_books": ["physics_required_2"], "type": "term", "cross_grade": true}
+{"id": "x03", "q": "氢氧化钠的物质的量浓度怎么算？", "subject": "science", "discipline": "chemistry", "grade": "11", "gold_books": ["chemistry_required_1"], "type": "procedure", "cross_grade": true}
+{"id": "x04", "q": "完全非弹性碰撞中动量守恒的条件是什么？", "subject": "science", "discipline": "physics", "grade": "10", "gold_books": ["physics_elective_1"], "type": "concept", "cross_grade": true}

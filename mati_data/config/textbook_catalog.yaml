@@ -1,0 +1,468 @@
+# Mati 教材目录映射表（Textbook Catalog）
+#
+# 用途：依据教材书名判定 subject（学科）/ grade（年级）/ grade_span（适用年级区间）等元数据，
+#       供 scripts/ingest_content.py 在入库时写入 ChromaDB metadata，并供检索层做学科路由与年级加权。
+#
+# 维护方式：新增教材时在 books 下追加一条，必须提供 id / subject / grade / match_all。
+#           解析器见 system/rag/curriculum_catalog.py。
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# 年级口径（重要，不要随意改）
+# ─────────────────────────────────────────────────────────────────────────────
+# grade  = 官方教材选用/征订目录中标注的年级，取"最早被正常讲授的年级"
+#          （这样不会因年级过滤把学生实际在学的书挡掉）
+# grade_span = 兼顾各校教学进度差异的适用年级区间，检索侧做软加权时用
+#
+# 年级编码：10=高一 11=高二 12=高三（与 GUI 的年级选择器对齐）
+#
+# 已知分歧（已在各书 grade_note 中标注）：
+#   · 物理必修第三册：各省市教材征订目录统一标"高一"（必修课程、合格考依据），
+#     但实际教学多安排在高二上（如青岛市即墨四中、德州市实验中学、凉山州教科所进度表）。
+#     → 取 grade=10（与征订口径一致），grade_span=[10,11]。
+#   · 信息技术选择性必修第四册《人工智能初步》：中小学教材征订目录标"高二"，
+#     电子课本网按实际教学顺序标"高三"。→ 取 grade=11，grade_span=[11,12]。
+#   · 化学选择性必修3《有机化学基础》/ 语文选择性必修下册：多数学校高二完成，
+#     部分学校延至高三。→ grade=11，grade_span=[11,12]。
+
+version: 1
+updated: 2026-10-01
+
+# 需要按 discipline（细分学科）拆集合的家族学科。
+# science 家族下有物理/化学/生物三个细分学科，若共用一个集合，
+# 学生问「光合作用」时可能召回物理块（串科）。
+# 其余学科（math / chinese / english / computer_science / social_studies）
+# 一个家族只有一个细分学科，不拆，集合名沿用家族名，避免无谓的重建。
+discipline_split_subjects:
+  - science
+
+grade_labels:
+  "10": 高一
+  "11": 高二
+  "12": 高三
+
+# subject 取值与 GUI 学科过滤器、检索层集合路由对齐
+subject_labels:
+  science: 物理/化学/生物
+  math: 数学
+  chinese: 语文
+  computer_science: 信息技术
+  english: 英语
+  social_studies: 政治/历史/地理
+
+sources:
+  - name: 教育部办公厅 2022 年中小学教学用书目录
+    url: https://jyt.ah.gov.cn/group3/M00/09/C2/wKg86mL1pXyAW_vuAjGkzSqYfOI137.pdf
+    role: 确认信息技术（人教中图版）必修 1–2 与选择性必修 1–6 的册次名称与出版单位
+  - name: 山东省多校教材选用/征订目录
+    url: https://www.lanling.gov.cn/info/3894/1361542.htm
+    role: 确认"必修→高一、选择性必修→高二"的统一口径；其中物理必修第三册标高一
+  - name: 电子课本网·高中电子课本（人教中图版信息技术分册年级）
+    url: http://www.dzkbw.com/books/gaozhong-all
+    role: 确认信息技术选必1/2/3=高二、选必4/5/6=高三的实际教学顺序
+  - name: 学校教学进度表（青岛市即墨四中 / 德州市实验中学 / 凉山州教科所）
+    role: 确认物理必修第三册实际授课年级多在高二上，与征订口径存在分歧
+  - name: 泸州市教育科学研究所「新高考背景下数学学科教材版本以及学习顺序」答复
+    url: https://wen.lzep.cn/wen/190894.html
+    role: 确认数学人教A版高一学完必修一/二、高二学完选择性必修一/二/三
+
+# match_all : 各组内任一命中即可（OR），组间必须全部命中（AND）
+# exclude   : 命中任一即否决
+# 匹配前会做归一化：去掉空白、·、・、括号，转小写。规则按列表顺序匹配，先命中者胜。
+books:
+
+  # ───────────────────────── 物理 · 人民教育出版社 · 2019 版 ─────────────────────────
+  - id: physics_required_1
+    subject: science
+    discipline: physics
+    title: 普通高中教科书·物理 必修 第一册
+    volume: 必修第一册
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一上（运动的描述、匀变速直线运动、相互作用、牛顿运动定律）
+    match_all:
+      - ["物理"]
+      - ["必修一", "必修第一册"]
+    exclude: ["选择性必修", "选必"]
+
+  - id: physics_required_2
+    subject: science
+    discipline: physics
+    title: 普通高中教科书·物理 必修 第二册
+    volume: 必修第二册
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一下（抛体运动、圆周运动、万有引力与宇宙航行、机械能守恒定律）
+    match_all:
+      - ["物理"]
+      - ["必修二", "必修第二册"]
+    exclude: ["选择性必修", "选必"]
+
+  - id: physics_required_3
+    subject: science
+    discipline: physics
+    title: 普通高中教科书·物理 必修 第三册
+    volume: 必修第三册
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10", "11"]
+    grade_note: 征订目录标高一（必修课程、合格考依据）；实际教学多在高二上。取较早年级避免过滤掉。
+    teaching_hint: 高一末～高二上（静电场、电路及其应用、电能能量守恒、电磁感应与电磁波初步）
+    match_all:
+      - ["物理"]
+      - ["必修三", "必修第三册"]
+    exclude: ["选择性必修", "选必"]
+
+  - id: physics_elective_1
+    subject: science
+    discipline: physics
+    title: 普通高中教科书·物理 选择性必修 第一册
+    volume: 选择性必修第一册
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二上（动量守恒定律、机械振动、机械波、光）
+    match_all:
+      - ["物理"]
+      - ["选必一", "选择性必修第一册", "选择性必修一"]
+
+  - id: physics_elective_2
+    subject: science
+    discipline: physics
+    title: 普通高中教科书·物理 选择性必修 第二册
+    volume: 选择性必修第二册
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二下（安培力与洛伦兹力、电磁感应、交变电流、电磁振荡与电磁波、传感器）
+    match_all:
+      - ["物理"]
+      - ["选必二", "选择性必修第二册", "选择性必修二"]
+
+  - id: physics_elective_3
+    subject: science
+    discipline: physics
+    title: 普通高中教科书·物理 选择性必修 第三册
+    volume: 选择性必修第三册
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二下～高三（分子动理论、气体、热力学定律、原子与原子核、波粒二象性）
+    match_all:
+      - ["物理"]
+      - ["选必三", "选择性必修第三册", "选择性必修三"]
+
+  # ───────────────────────── 化学 · 人民教育出版社 · 2019 版 ─────────────────────────
+  - id: chemistry_required_1
+    subject: science
+    discipline: chemistry
+    title: 普通高中教科书·化学 必修 第一册
+    volume: 必修第一册
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一上（物质及其变化、海水中的重要元素、铁金属材料、物质结构元素周期律）
+    match_all:
+      - ["化学"]
+      - ["必修一", "必修第一册"]
+    exclude: ["选择性必修", "选必"]
+
+  - id: chemistry_required_2
+    subject: science
+    discipline: chemistry
+    title: 普通高中教科书·化学 必修 第二册
+    volume: 必修第二册
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一下（化学反应与能量、有机化合物、化学与可持续发展）
+    match_all:
+      - ["化学"]
+      - ["必修二", "必修第二册"]
+    exclude: ["选择性必修", "选必"]
+
+  - id: chemistry_elective_1
+    subject: science
+    discipline: chemistry
+    title: 普通高中教科书·化学 选择性必修1 化学反应原理
+    volume: 选择性必修1
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二（化学反应与能量、速率与平衡、水溶液中的离子反应与平衡）
+    match_all:
+      - ["化学"]
+      - ["化学反应原理"]
+
+  - id: chemistry_elective_2
+    subject: science
+    discipline: chemistry
+    title: 普通高中教科书·化学 选择性必修2 物质结构与性质
+    volume: 选择性必修2
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二（原子结构与性质、分子结构与性质、晶体结构与性质）
+    match_all:
+      - ["化学"]
+      - ["物质结构与性质"]
+
+  - id: chemistry_elective_3
+    subject: science
+    discipline: chemistry
+    title: 普通高中教科书·化学 选择性必修3 有机化学基础
+    volume: 选择性必修3
+    publisher: 人民教育出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    grade_note: 多数学校高二完成，部分延至高三。
+    teaching_hint: 高二～高三（有机化合物的结构与性质、烃、烃的衍生物、生物大分子、合成高分子）
+    match_all:
+      - ["化学"]
+      - ["有机化学基础"]
+
+  # ───────────────────────── 数学 · 人民教育出版社 A 版 · 2019 版 ─────────────────────────
+  - id: math_required_1
+    subject: math
+    discipline: mathematics
+    title: 普通高中教科书·数学（A 版）必修 第一册
+    volume: 必修第一册
+    publisher: 人民教育出版社（A 版）
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一上（集合与常用逻辑用语、一元二次函数方程和不等式、函数概念与性质、指数对数函数、三角函数）
+    match_all:
+      - ["数学"]
+      - ["必修一", "必修第一册"]
+    exclude: ["选择性必修", "选必"]
+
+  - id: math_required_2
+    subject: math
+    discipline: mathematics
+    title: 普通高中教科书·数学（A 版）必修 第二册
+    volume: 必修第二册
+    publisher: 人民教育出版社（A 版）
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一下（平面向量及其应用、复数、立体几何初步、统计、概率）
+    match_all:
+      - ["数学"]
+      - ["必修二", "必修第二册"]
+    exclude: ["选择性必修", "选必"]
+
+  - id: math_elective_1
+    subject: math
+    discipline: mathematics
+    title: 普通高中教科书·数学（A 版）选择性必修 第一册
+    volume: 选择性必修第一册
+    publisher: 人民教育出版社（A 版）
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二上（空间向量与立体几何、直线和圆的方程、圆锥曲线的方程）
+    match_all:
+      - ["数学"]
+      - ["选择性必修第一册", "选必一", "选择性必修一"]
+
+  - id: math_elective_2
+    subject: math
+    discipline: mathematics
+    title: 普通高中教科书·数学（A 版）选择性必修 第二册
+    volume: 选择性必修第二册
+    publisher: 人民教育出版社（A 版）
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二下（数列、一元函数的导数及其应用）
+    match_all:
+      - ["数学"]
+      - ["选择性必修第二册", "选必二", "选择性必修二"]
+
+  - id: math_elective_3
+    subject: math
+    discipline: mathematics
+    title: 普通高中教科书·数学（A 版）选择性必修 第三册
+    volume: 选择性必修第三册
+    publisher: 人民教育出版社（A 版）
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二下（计数原理、随机变量及其分布、成对数据的统计分析）
+    match_all:
+      - ["数学"]
+      - ["选择性必修第三册", "选必三", "选择性必修三"]
+
+  # ───────────────────────── 语文 · 统编版（人民教育出版社）─────────────────────────
+  - id: chinese_required_1
+    subject: chinese
+    discipline: chinese
+    title: 普通高中教科书·语文 必修 上册
+    volume: 必修上册
+    publisher: 人民教育出版社（统编）
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一上（含《乡土中国》整本书阅读）
+    match_all:
+      - ["语文"]
+      - ["必修上册"]
+    exclude: ["选择性必修", "选必"]
+
+  - id: chinese_required_2
+    subject: chinese
+    discipline: chinese
+    title: 普通高中教科书·语文 必修 下册
+    volume: 必修下册
+    publisher: 人民教育出版社（统编）
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一下（含《红楼梦》整本书阅读）
+    match_all:
+      - ["语文"]
+      - ["必修下册"]
+    exclude: ["选择性必修", "选必"]
+
+  - id: chinese_elective_1
+    subject: chinese
+    discipline: chinese
+    title: 普通高中教科书·语文 选择性必修 上册
+    volume: 选择性必修上册
+    publisher: 人民教育出版社（统编）
+    edition: "2022"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二上
+    match_all:
+      - ["语文"]
+      - ["选择性必修上册"]
+
+  - id: chinese_elective_2
+    subject: chinese
+    discipline: chinese
+    title: 普通高中教科书·语文 选择性必修 中册
+    volume: 选择性必修中册
+    publisher: 人民教育出版社（统编）
+    edition: "2022"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二下
+    match_all:
+      - ["语文"]
+      - ["选择性必修中册"]
+
+  - id: chinese_elective_3
+    subject: chinese
+    discipline: chinese
+    title: 普通高中教科书·语文 选择性必修 下册
+    volume: 选择性必修下册
+    publisher: 人民教育出版社（统编）
+    edition: "2022"
+    grade: "11"
+    grade_span: ["11", "12"]
+    grade_note: 多数学校高二完成，部分延至高三。
+    teaching_hint: 高二～高三
+    match_all:
+      - ["语文"]
+      - ["选择性必修下册"]
+
+  # ───────────────── 信息技术 · 人民教育出版社/中国地图出版社（人教中图版）· 2019 版 ─────────────────
+  - id: it_required_1
+    subject: computer_science
+    discipline: information_technology
+    title: 普通高中教科书·信息技术 必修1 数据与计算
+    volume: 必修1
+    publisher: 人民教育出版社 / 中国地图出版社
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一（数据与信息、算法与程序实现、数据处理与应用）
+    match_all:
+      - ["信息技术"]
+      - ["数据与计算"]
+    exclude: ["数据结构"]
+
+  - id: it_required_2
+    subject: computer_science
+    discipline: information_technology
+    title: 普通高中教科书·信息技术 必修2 信息系统与社会
+    volume: 必修2
+    publisher: 人民教育出版社 / 中国地图出版社
+    edition: "2019"
+    grade: "10"
+    grade_span: ["10"]
+    teaching_hint: 高一（信息系统组成、网络与信息安全、信息社会）
+    match_all:
+      - ["信息技术"]
+      - ["信息系统与社会"]
+
+  - id: it_elective_1
+    subject: computer_science
+    discipline: information_technology
+    title: 普通高中教科书·信息技术 选择性必修1 数据与数据结构
+    volume: 选择性必修1
+    publisher: 人民教育出版社 / 中国地图出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二（数据结构基础、线性表、栈与队列、树、图、排序与查找）
+    match_all:
+      - ["信息技术"]
+      - ["数据与数据结构"]
+
+  - id: it_elective_2
+    subject: computer_science
+    discipline: information_technology
+    title: 普通高中教科书·信息技术 选择性必修2 网络基础
+    volume: 选择性必修2
+    publisher: 人民教育出版社 / 中国地图出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二（网络协议、IP 与路由、网络服务与应用）
+    match_all:
+      - ["信息技术"]
+      - ["网络基础"]
+
+  - id: it_elective_3
+    subject: computer_science
+    discipline: information_technology
+    title: 普通高中教科书·信息技术 选择性必修3 数据管理与分析
+    volume: 选择性必修3
+    publisher: 人民教育出版社 / 中国地图出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    teaching_hint: 高二（数据管理、数据库、数据分析与可视化）
+    match_all:
+      - ["信息技术"]
+      - ["数据管理与分析"]
+
+  - id: it_elective_4
+    subject: computer_science
+    discipline: information_technology
+    title: 普通高中教科书·信息技术 选择性必修4 人工智能初步
+    volume: 选择性必修4
+    publisher: 人民教育出版社 / 中国地图出版社
+    edition: "2019"
+    grade: "11"
+    grade_span: ["11", "12"]
+    grade_note: 征订目录标高二；电子课本网按实际教学顺序标高三。取较早年级。
+    teaching_hint: 高二～高三（智能感知、机器学习初步、智能系统与伦理）
+    match_all:
+      - ["信息技术"]
+      - ["人工智能初步"]

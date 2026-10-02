@@ -1,0 +1,17 @@
+# Optional dependencies for the Mati packaging & sync toolchain (tools/).
+#
+# The core toolchain (package_builder, sync_server, sync_client, e2e tests)
+# uses ONLY the Python standard library, so no extra packages are required to
+# run it on the same low-resource machines as the rest of Mati.
+#
+# These are OPTIONAL speed/robustness upgrades:
+#
+# zstandard>=0.22          # faster/better streaming compression (vs zip)
+# blake3                   # faster content-address hashing (vs sha256)
+# requests                 # alternative HTTP client (optional)
+#
+# To import synced packages into ChromaDB you also need the project's normal
+# dependencies (see ../requirements.txt): chromadb, sentence-transformers.
+#
+# Install everything:
+#   pip install -r tools/requirements-sync.txt
