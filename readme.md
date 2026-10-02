@@ -1,7 +1,5 @@
 # Mati: 学习伴侣（Learning Companion）
 
-
-
 一个**离线优先**的教育平台，将**检索增强生成（RAG）**与 **Qwen2.5-1.5B-Instruct 语言模型**相结合。设计用于在标准硬件（4GB 内存）上完全本地运行，不依赖网络。本项目已针对**中文**场景适配（生成、嵌入、OCR 均支持中文），并通过**图形界面（GUI）**提供全部交互能力。
 
 ---
@@ -23,7 +21,6 @@
 - [版本历史](#版本历史)
 
 ---
-
 
 ## 概述
 
@@ -172,8 +169,6 @@ Mati 证明：**智能、个性化教育并不需要昂贵的基础设施。** �
 - **导入/导出** — 保存与恢复学习进度（导入前会做 JSON 与内容大小校验）
 - **教师工作台** — 图形化导入教材、从 PDF 生成章节与测试题，全程无需命令行
 
-
-
 ### 教师端功能
 
 #### 内容管理
@@ -199,9 +194,6 @@ Mati 证明：**智能、个性化教育并不需要昂贵的基础设施。** �
 ## 系统架构
 
 ### 高层架构
-
-
-
 
 ```mermaid
 graph TB
@@ -309,17 +301,17 @@ ChromaDB 存储（元数据含 book_title/chapter/section/page/status）
 
 主要配套模块（`system/rag/`）：
 
-| 模块 | 职责 |
-|------|------|
-| `hybrid_retriever.py` | 稠密 + BM25 双路召回与 RRF 融合；HNSW 失效时逐级降级 |
-| `query_rewriter.py` | 同义词扩展与子问题拆解 |
-| `knowledge_governance.py` | 清洗/去重/冲突检测/检索过滤/引用生成与校验/创作类拒答 |
-| `context_budget.py` | `pack_evidence`：按 token 预算与价值排序组装证据 |
-| `rag_cache.py` | 语义缓存（命中即返回，不重复检索） |
-| `anti_confusion_engine.py` | 证据去冗余与忠实度判定 |
-| `curriculum_catalog.py` | 教材目录 → 学科/年级/细分，集合名生成 |
-| `retrieval_config.py` | 检索配置的读取与默认值 |
-| `text_cleanup.py` | PDF 字形错映射修复与 LaTeX 降级 |
+| 模块                         | 职责                                                  |
+| ---------------------------- | ----------------------------------------------------- |
+| `hybrid_retriever.py`      | 稠密 + BM25 双路召回与 RRF 融合；HNSW 失效时逐级降级  |
+| `query_rewriter.py`        | 同义词扩展与子问题拆解                                |
+| `knowledge_governance.py`  | 清洗/去重/冲突检测/检索过滤/引用生成与校验/创作类拒答 |
+| `context_budget.py`        | `pack_evidence`：按 token 预算与价值排序组装证据    |
+| `rag_cache.py`             | 语义缓存（命中即返回，不重复检索）                    |
+| `anti_confusion_engine.py` | 证据去冗余与忠实度判定                                |
+| `curriculum_catalog.py`    | 教材目录 → 学科/年级/细分，集合名生成                |
+| `retrieval_config.py`      | 检索配置的读取与默认值                                |
+| `text_cleanup.py`          | PDF 字形错映射修复与 LaTeX 降级                       |
 
 > [!NOTE]
 > 检索层的全部可调参数集中在 `mati_data/config/retrieval.yaml`，
@@ -391,27 +383,27 @@ ASCII 渲染
 
 版本以 `requirements.txt`（**UTF-16 LE + BOM 编码，修改时须保持该编码**）为准：
 
-| 软件包                    | 版本    | 用途                                       |
-| ------------------------- | ------- | ------------------------------------------ |
-| `llama-cpp-python`      | 0.3.16  | Qwen2.5-1.5B 模型推理                      |
-| `chromadb`              | 1.4.0   | RAG 向量数据库                             |
-| `sentence-transformers` | 5.2.0   | 嵌入生成（BAAI/bge-small-zh-v1.5，512 维） |
-| `torch`                 | 2.9.1   | 推理后端                                   |
-| `customtkinter`         | 5.2.2   | 现代 GUI 框架                              |
-| `PyMuPDF`               | 1.26.7  | PDF 处理                                   |
-| `jieba`                 | 0.42.1  | 中文分词（BM25 召回）                      |
-| `rank_bm25`             | 0.2.2   | BM25 关键词检索                            |
-| `numpy`                 | 2.2.6   | 向量运算（语义去重）                       |
+| 软件包                    | 版本   | 用途                                       |
+| ------------------------- | ------ | ------------------------------------------ |
+| `llama-cpp-python`      | 0.3.16 | Qwen2.5-1.5B 模型推理                      |
+| `chromadb`              | 1.4.0  | RAG 向量数据库                             |
+| `sentence-transformers` | 5.2.0  | 嵌入生成（BAAI/bge-small-zh-v1.5，512 维） |
+| `torch`                 | 2.9.1  | 推理后端                                   |
+| `customtkinter`         | 5.2.2  | 现代 GUI 框架                              |
+| `PyMuPDF`               | 1.26.7 | PDF 处理                                   |
+| `jieba`                 | 0.42.1 | 中文分词（BM25 召回）                      |
+| `rank_bm25`             | 0.2.2  | BM25 关键词检索                            |
+| `numpy`                 | 2.2.6  | 向量运算（语义去重）                       |
 
 > `jieba` 与 `rank_bm25` 缺失时自动退化为**纯稠密检索**，不崩溃。
 
 #### 可选 OCR 依赖（当前未启用）
 
-| 软件包          | 版本    | 状态                                       |
-| --------------- | ------- | ------------------------------------------ |
-| `pytesseract` | 0.3.13  | 已在依赖中，但**可执行文件不在 PATH**，不可用 |
-| `easyocr`     | —       | **未列入 `requirements.txt`**，不可用        |
-| `Pillow`      | 12.1.0  | 图像处理（GUI 图标）                        |
+| 软件包          | 版本   | 状态                                                |
+| --------------- | ------ | --------------------------------------------------- |
+| `pytesseract` | 0.3.13 | 已在依赖中，但**可执行文件不在 PATH**，不可用 |
+| `easyocr`     | —     | **未列入 `requirements.txt`**，不可用       |
+| `Pillow`      | 12.1.0 | 图像处理（GUI 图标）                                |
 
 > [!WARNING]
 > 上表两项 OCR 依赖当前均不可用，因此**扫描版 PDF（无文字层）无法摄取**。
@@ -421,15 +413,15 @@ ASCII 渲染
 
 检索层实测（78 题评测集，`scripts/eval_rag.py`，不含模型生成）：
 
-| 指标         | 实测值   | 说明                                   |
-| ------------ | -------- | -------------------------------------- |
-| 单题检索耗时 | 0.4–1.2 s | 纯检索层，本机（非 i3 目标机）         |
-| Recall@10    | 100.0%   | 78 题评测集                            |
-| Recall@5     | 97.0%    | —                                      |
-| MRR@10       | 0.831    | —                                      |
-| 路由准确率   | 100.0%   | 学科 → 集合路由                        |
-| 拒答正确率   | 91.7%    | 12 个库外问题                          |
-| 误拒率       | 12.1%    | 66 个正样本被误判为「教材中没有」      |
+| 指标         | 实测值     | 说明                              |
+| ------------ | ---------- | --------------------------------- |
+| 单题检索耗时 | 0.4–1.2 s | 纯检索层，本机（非 i3 目标机）    |
+| Recall@10    | 100.0%     | 78 题评测集                       |
+| Recall@5     | 97.0%      | —                                |
+| MRR@10       | 0.831      | —                                |
+| 路由准确率   | 100.0%     | 学科 → 集合路由                  |
+| 拒答正确率   | 91.7%      | 12 个库外问题                     |
+| 误拒率       | 12.1%      | 66 个正样本被误判为「教材中没有」 |
 
 > [!NOTE]
 > 目标部署机型是第三代 i3 CPU + 4GB 内存，该机型上的端到端 TTFT 会显著长于上表的纯检索耗时
@@ -520,7 +512,7 @@ Mati/
 #### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/aa-sikkkk/mati.git
+git clone https://github.com/donghongshangli/mati.git
 cd Mati
 ```
 
@@ -792,13 +784,13 @@ python tools/pdf_to_content.py --pdf 课本.pdf --mock
 > 进度管理 / 关于 / 使用指南 七个导航项，教师工作台也只有导入与生成两个功能。
 > 所有自检都通过下列命令行脚本执行。
 
-| 脚本 | 检测范围 | 输出 | 耗时 |
-|------|---------|------|------|
-| `scripts/verify_index.py` | 11 个集合的 HNSW 段是否可用（多轮重开客户端触发自愈） | stdout | 秒级 |
-| `scripts/check_retrieval.py` | 6 学科抽样端到端检索 + 库外拒答 + 缓存统计 | stdout | 约 4 分钟 |
-| `scripts/eval_rag.py` | 78 题评测集，含四组消融（`--ablation`） | stdout，`--json` 落明细 | 约 2–3 分钟 |
-| `scripts/verify_citations.py` | 引用链路端到端验证（**会加载 1.5B 模型**） | stdout | 约 2 分钟 |
-| `pytest tests/` | 全量 377 项 | stdout | 约 7 分钟 |
+| 脚本                            | 检测范围                                              | 输出                      | 耗时         |
+| ------------------------------- | ----------------------------------------------------- | ------------------------- | ------------ |
+| `scripts/verify_index.py`     | 11 个集合的 HNSW 段是否可用（多轮重开客户端触发自愈） | stdout                    | 秒级         |
+| `scripts/check_retrieval.py`  | 6 学科抽样端到端检索 + 库外拒答 + 缓存统计            | stdout                    | 约 4 分钟    |
+| `scripts/eval_rag.py`         | 78 题评测集，含四组消融（`--ablation`）             | stdout，`--json` 落明细 | 约 2–3 分钟 |
+| `scripts/verify_citations.py` | 引用链路端到端验证（**会加载 1.5B 模型**）      | stdout                    | 约 2 分钟    |
+| `pytest tests/`               | 全量 377 项                                           | stdout                    | 约 7 分钟    |
 
 ```bash
 PY=C:/Users/duanhongshangli/Anaconda3/envs/autoresearch/python.exe   # 项目实际环境
@@ -826,10 +818,10 @@ $PY -m pytest tests/test_rag_p2_governance.py tests/test_rag_p1_fixes.py \
 
 ### 摄取审计产物
 
-| 文件 | 内容 |
-|------|------|
-| `mati_data/ingest_gov_report.jsonl` | 清洗/去重/冲突扫描的逐条事件（含丢弃原因，可回溯） |
-| `mati_data/conflicts.jsonl` | 知识冲突报告（**仅在检出冲突时才创建**） |
+| 文件                                   | 内容                                                       |
+| -------------------------------------- | ---------------------------------------------------------- |
+| `mati_data/ingest_gov_report.jsonl`  | 清洗/去重/冲突扫描的逐条事件（含丢弃原因，可回溯）         |
+| `mati_data/conflicts.jsonl`          | 知识冲突报告（**仅在检出冲突时才创建**）             |
 | `mati_data/retrieval_failures.jsonl` | 真实检索失败语料，供模式挖掘反哺同义词表（评测流量不写入） |
 
 > 「文件不存在」不等于「没跑」：冲突扫描事实也会记入治理报告
@@ -925,19 +917,19 @@ print(result["answer"], result["confidence"])
 
 **返回体字段：**
 
-| 字段 | 说明 |
-|------|------|
-| `answer` | 答案正文（流式回调同时推送） |
-| `type` | `rag_response` / `no_evidence` / `creation_refused` |
-| `confidence` | 0–1 置信度 |
-| `sources` | 证据块元数据列表 |
-| `citations` | 检索层生成的引用编号表 `[{index, book_title, chapter, page, label}, …]` |
-| `citation_check` | 引用校验结果 `n_cited` / `n_valid` / `n_out_of_range` / `accuracy` |
-| `llm_used` | 是否真的走了生成模型 |
-| `context_used` | 实际喂给模型的证据文本 |
-| `best_evidence_score` / `best_query_coverage` | 证据分与查询覆盖率 |
-| `collections_used` / `context_stats` | 用过的集合、预算统计 |
-| `stage_debug` | 仅 `capture_stages=True` 时返回，含六个阶段中间产物 |
+| 字段                                              | 说明                                                                      |
+| ------------------------------------------------- | ------------------------------------------------------------------------- |
+| `answer`                                        | 答案正文（流式回调同时推送）                                              |
+| `type`                                          | `rag_response` / `no_evidence` / `creation_refused`                 |
+| `confidence`                                    | 0–1 置信度                                                               |
+| `sources`                                       | 证据块元数据列表                                                          |
+| `citations`                                     | 检索层生成的引用编号表`[{index, book_title, chapter, page, label}, …]` |
+| `citation_check`                                | 引用校验结果`n_cited` / `n_valid` / `n_out_of_range` / `accuracy` |
+| `llm_used`                                      | 是否真的走了生成模型                                                      |
+| `context_used`                                  | 实际喂给模型的证据文本                                                    |
+| `best_evidence_score` / `best_query_coverage` | 证据分与查询覆盖率                                                        |
+| `collections_used` / `context_stats`          | 用过的集合、预算统计                                                      |
+| `stage_debug`                                   | 仅`capture_stages=True` 时返回，含六个阶段中间产物                      |
 
 > [!NOTE]
 > 返回体**没有** `status` 字段，请判断 `type`。
@@ -1031,58 +1023,17 @@ PDF 若无文字层会走 OCR 分支，而当前环境**无可用 OCR 引擎**
 
 ### 知识库数据集
 
-Mati 的知识库基于以下开源教育数据集构建：
 
-#### 科学与数学
+### Mati 知识库基于人民教育出版社出版的高中数学、物理、化学、语文教材构建，具体包括：
+* 数学：人教版高中数学必修第一册、必修第二册、选择性必修第一册、选择性必修第二册、选择性必修第三册；
+* 物理：人教版高中物理必修第一册、必修第二册、必修第三册、选择性必修第一册、选择性必修第二册、选择性必修第三册；
+* 化学：人教版高中化学必修第一册、必修第二册、选择性必修1、选择性必修2、选择性必修3；
+* 语文：人民教育出版社出版的统编版高中语文必修上册、必修下册、选择性必修上册、选择性必修中册、选择性必修下册。
 
-- **[OpenStax Science](https://openstax.org/)**
-
-  - 开源大学教材（生物、物理、化学）
-  - 许可证：[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
-  - 用途：各年级通用科学概念
-- **[ScienceQA](https://scienceqa.github.io/)**
-
-  - 多模态科学问答数据集
-  - 许可证：[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-  - 用途：科学问题求解与解释
-- **[FineMath](https://huggingface.co/datasets/HuggingFaceTB/finemath)**
-
-  - 高质量数学推理数据集
-  - 许可证：[ODC-By](https://opendatacommons.org/licenses/by/1-0/)
-  - 用途：数学概念与问题求解
-- **[GSM8K](https://github.com/openai/grade-school-math)**
-
-  - 小学数学应用题
-  - 许可证：[MIT License](https://opensource.org/licenses/MIT)
-  - 用途：分步数学问题求解
-
-#### 计算机科学
-
-- **CS Stanford**（`cs_stanford` 集合）
-  - 来源：[HuggingFaceTB/cosmopedia](https://huggingface.co/datasets/HuggingFaceTB/cosmopedia)（Stanford 种子数据）
-  - 计算机科学和 STEM 的合成教材内容
-  - 许可证：[Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-  - 用途：编程概念与 CS 基础
-
-#### 语言与通识教育
-
-- **FineWeb-Edu**（`fineweb_edu` 集合）
-
-  - 来源：[HuggingFaceFW/fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu)
-  - 高质量教育网页内容
-  - 许可证：[ODC-By](https://opendatacommons.org/licenses/by/1-0/)
-  - 用途：英语语言与通识知识
-- **Khan Academy Pedagogy**（`khanacademy_pedagogy` 集合）
-
-  - 来源：[HuggingFaceTB/cosmopedia](https://huggingface.co/datasets/HuggingFaceTB/cosmopedia)（Khan Academy 种子数据）
-  - 叙述式教学风格的合成教育内容
-  - 许可证：[Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-  - 用途：跨学科的概念解释
+上述教材版权归人民教育出版社及相应编者所有，不属于开源数据集。本项目仅将教材作为内部知识库构建语料，经 OCR/文本解析、清洗、章节切分、知识点抽取、问答对生成和向量化处理后，用于 Mati 知识库的检索与教学辅助。项目不公开分发教材原文；如需公开分发或商业使用，应另行取得权利人授权。
 
 > [!NOTE]
 > 所有数据集均按其各自许可证使用。我们感谢这些宝贵教育资源的创作者与维护者。
-
-
 
 ### 社区
 
